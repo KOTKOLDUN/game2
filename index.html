@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Miner - Space Idle Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Background Canvas (stars) -->
+        <canvas id="bg-canvas"></canvas>
+       
+        <!-- Game Canvas -->
+        <canvas id="game-canvas"></canvas>
+       
+        <!-- UI Layer -->
+        <div id="ui-layer">
+           
+            <!-- MAIN MENU -->
+            <div id="main-menu" class="screen active">
+                <div class="menu-container">
+                    <h1 class="game-title">PLANET MINER</h1>
+                    <div class="title-underline"></div>
+                    <p class="game-subtitle">Build Your Galactic Empire</p>
+                   
+                    <div class="menu-buttons">
+                        <button id="btn-continue" class="menu-btn primary hidden">
+                            <span class="btn-icon">▶</span>
+                            <span>Continue</span>
+                        </button>
+                        <button id="btn-newgame" class="menu-btn">
+                            <span class="btn-icon">🚀</span>
+                            <span>New Game</span>
+                        </button>
+                        <button id="btn-settings" class="menu-btn">
+                            <span class="btn-icon">⚙️</span>
+                            <span>Settings</span>
+                        </button>
+                        <button id="btn-stats" class="menu-btn">
+                            <span class="btn-icon">📊</span>
+                            <span>Statistics</span>
+                        </button>
+                        <button id="btn-help" class="menu-btn">
+                            <span class="btn-icon">❓</span>
+                            <span>How to Play</span>
+                        </button>
+                        <button id="btn-prestige" class="menu-btn prestige">
+                            <span class="btn-icon">✨</span>
+                            <span>Prestige</span>
+                        </button>
+                    </div>
+                   
+                    <div class="version-info">v2.0 - Galactic Edition</div>
+                </div>
+            </div>
+
+            <!-- TUTORIAL SCREEN -->
+            <div id="tutorial-screen" class="screen">
+                <div class="tutorial-container">
+                    <h2>Welcome, Commander!</h2>
+                    <div class="tutorial-steps">
+                        <div class="tutorial-step active" data-step="1">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Click to Mine</h3>
+                                <p>Click on the planet to extract resources. Faster clicks build combo!</p>
+                                <div class="step-visual">🖱️💎</div>
+                            </div>
+                        </div>
+                        <div class="tutorial-step" data-step="2">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Buy Upgrades</h3>
+                                <p>Use minerals to purchase mining equipment and automation.</p>
+                                <div class="step-visual">⚙️⬆️</div>
+                            </div>
+                        </div>
+                        <div class="tutorial-step" data-step="3">
+                            <div class="step-content">
+                                <h3>Unlock Planets</h3>
+                                <p>Each planet has unique resources. Unlock all 7 to become a Galactic Emperor!</p>
+                                <div class="step-visual">🪐🔓</div>
+                            </div>
+                        </div>
+                        <div class="tutorial-step" data-step="4">
+                            <div class="step-content">
+                                <h3>Prestige System</h3>
+                                <p>Reset progress to gain Star Essence - permanent bonuses for future runs!</p>
+                                <div class="step-visual">✨🔄</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tutorial-nav">
+                        <button id="tut-prev" class="nav-btn" disabled>Previous</button>
+                        <div class="step-dots">
+                            <span class="dot active"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                        </div>
+                        <button id="tut-next" class="nav-btn">Next</button>
+                    </div>
+                    <button id="tut-skip" class="skip-btn">Skip Tutorial</button>
+                </div>
+            </div>
+
+            <!-- GAME SCREEN -->
+            <div id="game-screen" class="screen">
+                <!-- Top Bar -->
+                <div id="top-bar">
+                    <button id="btn-pause" class="icon-btn" title="Menu">☰</button>
+                   
+                    <div class="resource-display">
+                        <div class="resource-icon" id="resource-icon">💎</div>
+                        <div class="resource-info">
+                            <span id="resource-name">Minerals</span>
+                            <span id="resource-count">0</span>
+                            <span id="resource-per-sec">(+0/s)</span>
+                        </div>
+                    </div>
+                   
+                    <div id="planet-info">
+                        <span id="current-planet-name">Earth</span>
+                        <span id="planet-tier">Tier 1</span>
+                    </div>
+                   
+                    <div class="top-right-icons">
+                        <div id="daily-bonus-btn" class="icon-btn" title="Daily Bonus">🎁</div>
+                        <div id="stats-toggle" class="icon-btn" title="Statistics">📊</div>
+                    </div>
+                </div>
+
+                <!-- Left Panel - Upgrades -->
+                <div id="upgrade-panel">
+                    <h2>Upgrades</h2>
+                    <div id="upgrade-tabs">
+                        <button class="tab-btn active" data-tab="mining">Mining</button>
+                        <button class="tab-btn" data-tab="automation">Auto</button>
+                        <button class="tab-btn" data-tab="bonus">Bonus</button>
+                    </div>
+                    <div id="upgrade-list"></div>
+                </div>
+
+                <!-- Right Panel -->
+                <div id="right-panel">
+                    <!-- Prestige Info -->
+                    <div id="prestige-panel" class="side-panel">
+                        <h3>Star Essence</h3>
+                        <div class="essence-display">
+                            <span class="essence-icon">✨</span>
+                            <span id="essence-count">0</span>
+                        </div>
+                        <div class="essence-multiplier">+0% all resources</div>
+                        <button id="btn-prestige-now" class="prestige-btn">Prestige Now</button>
+                    </div>
+
+                    <!-- Achievements -->
+                    <div id="achievements-section" class="side-panel">
+                        <h3>Achievements</h3>
+                        <div id="achievements-list"></div>
+                    </div>
+
+                    <!-- Combo Display -->
+                    <div id="combo-display">
+                        <span id="combo-count">x1</span>
+                        <div id="combo-bar-container">
+                            <div id="combo-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Bar -->
+                <div id="bottom-bar">
+                    <button id="prev-planet" class="nav-btn">◀</button>
+                    <div id="planet-selector"></div>
+                    <button id="next-planet" class="nav-btn">▶</button>
+                </div>
+
+                <!-- Floating Text Container -->
+                <div id="floating-text-container"></div>
+            </div>
+
+            <!-- PAUSE MENU -->
+            <div id="pause-menu" class="screen overlay">
+                <div class="pause-container">
+                    <h2>Paused</h2>
+                    <button id="btn-resume" class="menu-btn">Resume</button>
+                    <button id="btn-save" class="menu-btn">Save Game</button>
+                    <button id="btn-settings-pause" class="menu-btn">Settings</button>
+                    <button id="btn-mainmenu" class="menu-btn warning">Main Menu</button>
+                </div>
+            </div>
+
+            <!-- SETTINGS SCREEN -->
+            <div id="settings-screen" class="screen overlay">
+                <div class="settings-container">
+                    <h2>Settings</h2>
+                   
+                    <div class="setting-group">
+                        <label>Audio Volume</label>
+                        <input type="range" id="volume-slider" min="0" max="100" value="50">
+                        <span id="volume-value">50%</span>
+                    </div>
+                   
+                    <div class="setting-group">
+                        <label>Particle Effects</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="particles-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                   
+                    <div class="setting-group">
+                        <label>Floating Numbers</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="floating-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                   
+                    <div class="setting-group">
+                        <label>Screen Shake</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="shake-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                   
+                    <div class="setting-group">
+                        <label>Autosave</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="autosave-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                   
+                    <div class="setting-group danger-zone">
+                        <button id="btn-reset" class="danger-btn">Reset All Progress</button>
+                        <button id="btn-export" class="menu-btn">Export Save</button>
+                        <button id="btn-import" class="menu-btn">Import Save</button>
+                    </div>
+                   
+                    <button id="btn-close-settings" class="confirm-btn">Close</button>
+                </div>
+            </div>
+
+            <!-- STATISTICS SCREEN -->
+            <div id="stats-screen" class="screen overlay">
+                <div class="stats-container">
+                    <h2>Statistics</h2>
+                    <div id="stats-content">
+                        <div class="stat-category">
+                            <h3>Resources</h3>
+                            <div class="stat-row"><span>Total Mined:</span><span id="stat-total-mined">0</span></div>
+                            <div class="stat-row"><span>Total Spent:</span><span id="stat-total-spent">0</span></div>
+                            <div class="stat-row"><span>Highest Combo:</span><span id="stat-max-combo">0</span></div>
+                        </div>
+                        <div class="stat-category">
+                            <h3>Activity</h3>
+                            <div class="stat-row"><span>Total Clicks:</span><span id="stat-total-clicks">0</span></div>
+                            <div class="stat-row"><span>Time Played:</span><span id="stat-playtime">0:00</span></div>
+                            <div class="stat-row"><span>Asteroids Destroyed:</span><span id="stat-asteroids">0</span></div>
+                        </div>
+                        <div class="stat-category">
+                            <h3>Progress</h3>
+                            <div class="stat-row"><span>Planets Unlocked:</span><span id="stat-planets">1/7</span></div>
+                            <div class="stat-row"><span>Upgrades Bought:</span><span id="stat-upgrades">0</span></div>
+                            <div class="stat-row"><span>Achievements:</span><span id="stat-achievements">0/20</span></div>
+                            <div class="stat-row"><span>Prestige Count:</span><span id="stat-prestige">0</span></div>
+                        </div>
+                    </div>
+                    <button id="btn-close-stats" class="confirm-btn">Close</button>
+                </div>
+            </div>
+
+            <!-- PRESTIGE SCREEN -->
+            <div id="prestige-screen" class="screen overlay">
+                <div class="prestige-container">
+                    <h2>✨ Prestige ✨</h2>
+                    <p class="prestige-desc">Reset your progress to gain permanent Star Essence bonuses!</p>
+                   
+                    <div class="prestige-info">
+                        <div class="prestige-current">
+                            <span>Current Essence:</span>
+                            <span id="prestige-current-essence">0</span>
+                        </div>
+                        <div class="prestige-gain">
+                            <span>Essence on Reset:</span>
+                            <span id="prestige-gain">+0</span>
+                        </div>
+                        <div class="prestige-bonus">
+                            <span>Resource Multiplier:</span>
+                            <span id="prestige-multiplier">x1.00</span>
+                        </div>
+                    </div>
+                   
+                    <div class="prestige-warning">
+                        ⚠️ This will reset ALL progress except Star Essence and achievements!
+                    </div>
+                   
+                    <div class="prestige-actions">
+                        <button id="btn-confirm-prestige" class="prestige-btn">Confirm Prestige</button>
+                        <button id="btn-cancel-prestige" class="menu-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DAILY BONUS MODAL -->
+            <div id="daily-bonus-modal" class="modal hidden">
+                <div class="modal-content bonus-content">
+                    <h2>🎁 Daily Bonus</h2>
+                    <div class="bonus-calendar">
+                        <div class="day" data-day="1"><span>Day 1</span><span class="reward">100💎</span></div>
+                        <div class="day" data-day="2"><span>Day 2</span><span class="reward">250💎</span></div>
+                        <div class="day" data-day="3"><span>Day 3</span><span class="reward">500💎</span></div>
+                        <div class="day" data-day="4"><span>Day 4</span><span class="reward">1000💎</span></div>
+                        <div class="day" data-day="5"><span>Day 5</span><span class="reward">2500💎</span></div>
+                        <div class="day" data-day="6"><span>Day 6</span><span class="reward">5000💎</span></div>
+                        <div class="day current" data-day="7"><span>Day 7</span><span class="reward">✨+1</span></div>
+                    </div>
+                    <button id="btn-claim-bonus" class="confirm-btn">Claim Reward</button>
+                </div>
+            </div>
+
+            <!-- OFFLINE PROGRESS MODAL -->
+            <div id="offline-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h2>⏰ Welcome Back!</h2>
+                    <p>While you were away, your miners collected:</p>
+                    <div id="offline-resources">0 Minerals</div>
+                    <div id="offline-time"></div>
+                    <button id="offline-confirm" class="confirm-btn">Collect</button>
+                </div>
+            </div>
+
+            <!-- ASTEROID EVENT -->
+            <div id="asteroid-event" class="hidden">
+                <div class="event-content">
+                    <span class="event-icon">☄️</span>
+                    <span class="event-text">Asteroid Shower! Click for bonus resources!</span>
+                </div>
+            </div>
+
+            <!-- TOAST NOTIFICATIONS -->
+            <div id="toast-container"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
