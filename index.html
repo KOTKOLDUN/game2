@@ -1,0 +1,3333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Miner v2.1 - Galactic Edition</title>
+    <style>
+/* ==========================================
+   CRITICAL FIXES - Base Styles
+   ========================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #00d4ff;
+    --primary-dark: #0088aa;
+    --secondary: #ff6b35;
+    --accent: #ffd700;
+    --success: #00ff88;
+    --danger: #ff3366;
+    --warning: #ffaa00;
+    --bg-dark: #0a0a1a;
+    --bg-panel: rgba(10, 15, 30, 0.95);
+    --bg-glass: rgba(20, 25, 40, 0.8);
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b0;
+    --border-glow: 0 0 20px rgba(0, 212, 255, 0.3);
+    --shadow-lg: 0 10px 40px rgba(0,0,0,0.5);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* ==========================================
+   CANVAS LAYERS - Critical z-index fixes
+   ========================================== */
+#bg-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: radial-gradient(ellipse at center, #1a1a3a 0%, #0a0a1a 100%);
+}
+
+#game-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    cursor: crosshair;
+    pointer-events: auto;
+}
+
+/* ==========================================
+   UI LAYER - Fixed pointer-events
+   ========================================== */
+#ui-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+    pointer-events: none;
+}
+
+#ui-layer > * {
+    pointer-events: auto;
+}
+
+/* ==========================================
+   SCREENS
+   ========================================== */
+.screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 200;
+    display: none;
+    pointer-events: auto;
+}
+
+.screen.active {
+    display: flex;
+}
+
+.screen.overlay {
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(10px);
+    align-items: center;
+    justify-content: center;
+}
+
+/* ==========================================
+   MAIN MENU
+   ========================================== */
+#main-menu {
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(ellipse at 20% 80%, rgba(0,212,255,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,107,53,0.15) 0%, transparent 50%),
+        var(--bg-dark);
+}
+
+.menu-container {
+    text-align: center;
+    animation: fadeInUp 0.8s ease-out;
+}
+
+.game-title {
+    font-size: clamp(3rem, 10vw, 6rem);
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 50%, var(--secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 60px rgba(0,212,255,0.5);
+    margin-bottom: 0.5rem;
+}
+
+.title-underline {
+    width: 200px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    margin: 0 auto 1rem;
+    animation: pulse 2s infinite;
+}
+
+.game-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 3rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+}
+
+.menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 2.5rem;
+    background: var(--bg-glass);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    min-width: 250px;
+    backdrop-filter: blur(10px);
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 300;
+}
+
+.menu-btn:hover {
+    background: rgba(0,212,255,0.1);
+    border-color: var(--primary);
+    transform: translateX(10px);
+    box-shadow: var(--border-glow);
+}
+
+.menu-btn.primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-color: var(--primary);
+    font-weight: bold;
+}
+
+.menu-btn.prestige {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.menu-btn.prestige:hover {
+    background: rgba(255,215,0,0.1);
+    box-shadow: 0 0 20px rgba(255,215,0,0.3);
+}
+
+.menu-btn.warning {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.menu-btn.warning:hover {
+    background: rgba(255,51,102,0.1);
+}
+
+.btn-icon {
+    font-size: 1.3rem;
+    width: 30px;
+    text-align: center;
+}
+
+.version-info {
+    position: absolute;
+    bottom: 20px;
+    right: 30px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================
+   TUTORIAL SCREEN
+   ========================================== */
+#tutorial-screen {
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,15,30,0.95);
+}
+
+.tutorial-container {
+    max-width: 600px;
+    width: 90%;
+    text-align: center;
+}
+
+.tutorial-container h2 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: var(--primary);
+}
+
+.tutorial-steps {
+    margin-bottom: 2rem;
+}
+
+.tutorial-step {
+    display: none;
+    animation: fadeIn 0.5s;
+}
+
+.tutorial-step.active {
+    display: block;
+}
+
+.step-number {
+    width: 60px;
+    height: 60px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0 auto 1rem;
+}
+
+.step-content h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.step-content p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.step-visual {
+    font-size: 4rem;
+    margin: 1rem 0;
+    animation: bounce 2s infinite;
+}
+
+.tutorial-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.step-dots {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.dot.active {
+    background: var(--primary);
+    transform: scale(1.2);
+}
+
+.skip-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    text-decoration: underline;
+    transition: var(--transition);
+}
+
+.skip-btn:hover {
+    color: var(--text-primary);
+}
+
+/* ==========================================
+   GAME SCREEN
+   ========================================== */
+#game-screen {
+    flex-direction: column;
+}
+
+#top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 20;
+    pointer-events: auto;
+}
+
+.top-right-icons {
+    display: flex;
+    gap: 10px;
+}
+
+.resource-display {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--bg-panel);
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,212,255,0.3);
+    box-shadow: var(--border-glow);
+    pointer-events: auto;
+}
+
+.resource-icon {
+    font-size: 32px;
+    animation: pulse 2s infinite;
+}
+
+.resource-info {
+    display: flex;
+    flex-direction: column;
+}
+
+#resource-name {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#resource-count {
+    font-size: 28px;
+    font-weight: bold;
+    color: var(--accent);
+    text-shadow: 0 0 10px rgba(255,215,0,0.5);
+}
+
+#resource-per-sec {
+    font-size: 14px;
+    color: var(--success);
+}
+
+#planet-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#current-planet-name {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary);
+    text-shadow: 0 0 20px rgba(0,212,255,0.5);
+}
+
+#planet-tier {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.icon-btn {
+    width: 50px;
+    height: 50px;
+    background: var(--bg-panel);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: var(--transition);
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 50;
+}
+
+.icon-btn:hover {
+    background: rgba(0,212,255,0.2);
+    transform: scale(1.1);
+    box-shadow: var(--border-glow);
+}
+
+/* Side Panels */
+#upgrade-panel {
+    position: absolute;
+    left: 20px;
+    top: 100px;
+    width: 320px;
+    max-height: calc(100vh - 200px);
+    background: var(--bg-panel);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 16px;
+    padding: 20px;
+    overflow-y: auto;
+    backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-lg);
+    z-index: 15;
+    pointer-events: auto;
+}
+
+#upgrade-panel h2 {
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+#upgrade-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: var(--transition);
+    font-size: 12px;
+    text-transform: uppercase;
+    pointer-events: auto !important;
+}
+
+.tab-btn.active {
+    background: rgba(0,212,255,0.2);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+#upgrade-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.upgrade-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 15px;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    pointer-events: auto !important;
+}
+
+.upgrade-item:hover {
+    border-color: var(--primary);
+    transform: translateX(5px);
+    box-shadow: 0 5px 20px rgba(0,212,255,0.2);
+}
+
+.upgrade-item.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.upgrade-level {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: rgba(0,0,0,0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.upgrade-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.upgrade-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(0,212,255,0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.upgrade-info h4 {
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.upgrade-info p {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.upgrade-cost {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.upgrade-cost.affordable {
+    color: var(--success);
+}
+
+/* Right Panel */
+#right-panel {
+    position: absolute;
+    right: 20px;
+    top: 100px;
+    width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 15;
+    pointer-events: auto;
+}
+
+.side-panel {
+    background: var(--bg-panel);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 16px;
+    padding: 15px;
+    backdrop-filter: blur(20px);
+    pointer-events: auto;
+}
+
+.side-panel h3 {
+    font-size: 14px;
+    color: var(--primary);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+#prestige-panel {
+    border-color: rgba(255,215,0,0.3);
+}
+
+.essence-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 24px;
+    color: var(--accent);
+    margin-bottom: 5px;
+}
+
+.essence-icon {
+    font-size: 28px;
+    animation: rotate 3s linear infinite;
+}
+
+.essence-multiplier {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.prestige-btn {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--accent), #ffaa00);
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition);
+    pointer-events: auto !important;
+}
+
+.prestige-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(255,215,0,0.4);
+}
+
+#achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.achievement {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    font-size: 12px;
+    opacity: 0.5;
+    transition: var(--transition);
+}
+
+.achievement.unlocked {
+    opacity: 1;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+}
+
+.achievement-icon {
+    font-size: 20px;
+}
+
+#combo-display {
+    background: var(--bg-panel);
+    border: 1px solid rgba(255,107,53,0.3);
+    border-radius: 16px;
+    padding: 15px;
+    text-align: center;
+    pointer-events: auto;
+}
+
+#combo-count {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--secondary);
+    display: block;
+    margin-bottom: 10px;
+}
+
+#combo-bar-container {
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+#combo-bar {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--secondary), var(--accent));
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
+
+/* Bottom Bar */
+#bottom-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--bg-panel);
+    padding: 15px;
+    border-radius: 50px;
+    border: 1px solid rgba(0,212,255,0.2);
+    backdrop-filter: blur(20px);
+    z-index: 15;
+    pointer-events: auto;
+}
+
+#planet-selector {
+    display: flex;
+    gap: 10px;
+}
+
+.planet-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    pointer-events: auto !important;
+}
+
+.planet-btn::after {
+    content: attr(data-name);
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: var(--transition);
+    color: var(--text-primary);
+}
+
+.planet-btn:hover::after {
+    opacity: 1;
+    bottom: -20px;
+}
+
+.planet-btn.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 20px rgba(0,212,255,0.5);
+    transform: scale(1.1);
+}
+
+.planet-btn.locked {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.planet-btn.locked::before {
+    content: '🔒';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+}
+
+.nav-btn {
+    width: 40px;
+    height: 40px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 50%;
+    color: var(--primary);
+    font-size: 18px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto !important;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: rgba(0,212,255,0.3);
+    transform: scale(1.1);
+}
+
+.nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* ==========================================
+   PAUSE MENU
+   ========================================== */
+.pause-container {
+    background: var(--bg-panel);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: var(--shadow-lg), var(--border-glow);
+    animation: modalIn 0.3s ease-out;
+    pointer-events: auto;
+}
+
+.pause-container h2 {
+    font-size: 2.5rem;
+    margin-bottom: 30px;
+    color: var(--primary);
+}
+
+/* ==========================================
+   SETTINGS SCREEN
+   ========================================== */
+.settings-container {
+    background: var(--bg-panel);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 20px;
+    padding: 40px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 0.3s ease-out;
+    pointer-events: auto;
+}
+
+.settings-container h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: var(--primary);
+    text-align: center;
+}
+
+.setting-group {
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.setting-group label {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+}
+
+.setting-group input[type="range"] {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+#volume-value {
+    float: right;
+    color: var(--primary);
+}
+
+/* Toggle Switch */
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255,255,255,0.1);
+    transition: var(--transition);
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: var(--transition);
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.danger-zone {
+    border: 1px solid var(--danger);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.danger-btn {
+    width: 100%;
+    padding: 12px;
+    background: rgba(255,51,102,0.2);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    color: var(--danger);
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 10px;
+    pointer-events: auto !important;
+}
+
+.danger-btn:hover {
+    background: var(--danger);
+    color: white;
+}
+
+/* ==========================================
+   STATISTICS SCREEN
+   ========================================== */
+.stats-container {
+    background: var(--bg-panel);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 20px;
+    padding: 40px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn 0.3s ease-out;
+    pointer-events: auto;
+}
+
+.stats-container h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: var(--primary);
+    text-align: center;
+}
+
+.stat-category {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+}
+
+.stat-category h3 {
+    color: var(--accent);
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-row span:first-child {
+    color: var(--text-secondary);
+}
+
+.stat-row span:last-child {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+/* ==========================================
+   PRESTIGE SCREEN
+   ========================================== */
+.prestige-container {
+    background: var(--bg-panel);
+    border: 2px solid var(--accent);
+    border-radius: 20px;
+    padding: 40px;
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(255,215,0,0.2);
+    animation: modalIn 0.3s ease-out;
+    pointer-events: auto;
+}
+
+.prestige-container h2 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, var(--accent), #ffaa00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.prestige-desc {
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+}
+
+.prestige-info {
+    background: rgba(255,215,0,0.05);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.prestige-info > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,215,0,0.1);
+}
+
+.prestige-info > div:last-child {
+    border-bottom: none;
+}
+
+.prestige-gain {
+    color: var(--success);
+    font-weight: bold;
+}
+
+.prestige-warning {
+    background: rgba(255,51,102,0.1);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    padding: 15px;
+    color: var(--danger);
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.prestige-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+/* ==========================================
+   DAILY BONUS
+   ========================================== */
+.bonus-content {
+    max-width: 500px;
+}
+
+.bonus-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    margin: 30px 0;
+}
+
+.day {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 10px 5px;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.day span {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.day .reward {
+    font-size: 0.9rem;
+    color: var(--accent);
+    margin-top: 5px;
+}
+
+.day.current {
+    background: rgba(0,212,255,0.2);
+    border: 1px solid var(--primary);
+    transform: scale(1.1);
+}
+
+.day.claimed {
+    background: rgba(0,255,136,0.2);
+    border-color: var(--success);
+}
+
+/* ==========================================
+   FLOATING TEXT
+   ========================================== */
+#floating-text-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.floating-text {
+    position: absolute;
+    font-weight: bold;
+    font-size: 18px;
+    color: var(--accent);
+    text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    animation: floatUp 1.5s ease-out forwards;
+    pointer-events: none;
+}
+
+.floating-text.critical {
+    color: var(--secondary);
+    font-size: 24px;
+    text-shadow: 0 0 15px rgba(255,107,53,0.8);
+}
+
+.floating-text.combo {
+    color: var(--primary);
+    font-size: 20px;
+}
+
+@keyframes floatUp {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-80px) scale(1.2);
+    }
+}
+
+/* ==========================================
+   MODALS
+   ========================================== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+    pointer-events: auto;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--bg-panel);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: var(--shadow-lg), var(--border-glow);
+    animation: modalIn 0.3s ease-out;
+    pointer-events: auto;
+}
+
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal h2 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: var(--primary);
+}
+
+.confirm-btn {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border: none;
+    padding: 12px 40px;
+    border-radius: 25px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 20px;
+    pointer-events: auto !important;
+}
+
+.confirm-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0,212,255,0.4);
+}
+
+#asteroid-event {
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(255,107,53,0.9), rgba(255,170,0,0.9));
+    padding: 15px 30px;
+    border-radius: 50px;
+    animation: eventPulse 2s infinite;
+    z-index: 50;
+    pointer-events: auto;
+}
+
+#asteroid-event.hidden {
+    display: none;
+}
+
+@keyframes eventPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,107,53,0.5); }
+    50% { box-shadow: 0 0 40px rgba(255,107,53,0.8); }
+}
+
+.event-icon {
+    font-size: 24px;
+    animation: shake 0.5s infinite;
+}
+
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--bg-panel);
+    border-left: 4px solid var(--success);
+    border-radius: 8px;
+    padding: 15px 20px;
+    min-width: 250px;
+    animation: slideIn 0.3s ease-out;
+    box-shadow: var(--shadow-lg);
+    pointer-events: auto;
+}
+
+.toast.error {
+    border-left-color: var(--danger);
+}
+
+.toast.info {
+    border-left-color: var(--primary);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+}
+
+/* ==========================================
+   SCROLLBAR
+   ========================================== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0,212,255,0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,212,255,0.5);
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+@media (max-width: 1200px) {
+    #upgrade-panel {
+        width: 280px;
+    }
+    #right-panel {
+        width: 220px;
+    }
+}
+
+@media (max-width: 900px) {
+    #upgrade-panel, #right-panel {
+        position: relative;
+        width: 100%;
+        max-height: none;
+        left: 0;
+        right: 0;
+        top: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .game-title {
+        font-size: 3rem;
+    }
+   
+    .menu-btn {
+        min-width: 200px;
+        padding: 0.8rem 1.5rem;
+    }
+   
+    #top-bar {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 10px;
+    }
+   
+    .resource-display {
+        order: -1;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="bg-canvas"></canvas>
+        <canvas id="game-canvas"></canvas>
+       
+        <div id="ui-layer">
+            <!-- MAIN MENU -->
+            <div id="main-menu" class="screen active">
+                <div class="menu-container">
+                    <h1 class="game-title">PLANET MINER</h1>
+                    <div class="title-underline"></div>
+                    <p class="game-subtitle">Build Your Galactic Empire</p>
+                    <div class="menu-buttons">
+                        <button id="btn-continue" class="menu-btn primary hidden">▶ Continue</button>
+                        <button id="btn-newgame" class="menu-btn">🚀 New Game</button>
+                        <button id="btn-settings" class="menu-btn">⚙️ Settings</button>
+                        <button id="btn-stats" class="menu-btn">📊 Statistics</button>
+                        <button id="btn-help" class="menu-btn">❓ How to Play</button>
+                        <button id="btn-prestige-menu" class="menu-btn prestige">✨ Prestige</button>
+                    </div>
+                    <div class="version-info">v2.1 - Bugfix Edition</div>
+                </div>
+            </div>
+
+            <!-- TUTORIAL -->
+            <div id="tutorial-screen" class="screen">
+                <div class="tutorial-container">
+                    <h2>Welcome, Commander!</h2>
+                    <div class="tutorial-steps">
+                        <div class="tutorial-step active" data-step="1">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Click to Mine</h3>
+                                <p>Click on the planet to extract resources. Faster clicks build combo!</p>
+                                <div class="step-visual">🖱️💎</div>
+                            </div>
+                        </div>
+                        <div class="tutorial-step" data-step="2">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Buy Upgrades</h3>
+                                <p>Use minerals to purchase mining equipment and automation.</p>
+                                <div class="step-visual">⚙️⬆️</div>
+                            </div>
+                        </div>
+                        <div class="tutorial-step" data-step="3">
+                            <div class="step-content">
+                                <h3>Unlock Planets</h3>
+                                <p>Each planet has unique resources. Unlock all 7 to become a Galactic Emperor!</p>
+                                <div class="step-visual">🪐🔓</div>
+                            </div>
+                        </div>
+                        <div class="tutorial-step" data-step="4">
+                            <div class="step-content">
+                                <h3>Prestige System</h3>
+                                <p>Reset progress to gain Star Essence - permanent bonuses for future runs!</p>
+                                <div class="step-visual">✨🔄</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tutorial-nav">
+                        <button id="tut-prev" class="nav-btn" disabled>◀</button>
+                        <div class="step-dots">
+                            <span class="dot active"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                        </div>
+                        <button id="tut-next" class="nav-btn">▶</button>
+                    </div>
+                    <button id="tut-skip" class="skip-btn">Skip Tutorial</button>
+                </div>
+            </div>
+
+            <!-- GAME SCREEN -->
+            <div id="game-screen" class="screen">
+                <div id="top-bar">
+                    <button id="btn-pause" class="icon-btn">☰</button>
+                    <div class="resource-display">
+                        <div class="resource-icon" id="resource-icon">💎</div>
+                        <div class="resource-info">
+                            <span id="resource-name">Minerals</span>
+                            <span id="resource-count">0</span>
+                            <span id="resource-per-sec">(+0/s)</span>
+                        </div>
+                    </div>
+                    <div id="planet-info">
+                        <span id="current-planet-name">Terra Prime</span>
+                        <span id="planet-tier">Tier 1</span>
+                    </div>
+                    <div class="top-right-icons">
+                        <button id="daily-bonus-btn" class="icon-btn">🎁</button>
+                        <button id="stats-toggle" class="icon-btn">📊</button>
+                    </div>
+                </div>
+
+                <div id="upgrade-panel">
+                    <h2>Upgrades</h2>
+                    <div id="upgrade-tabs">
+                        <button class="tab-btn active" data-tab="mining">Mining</button>
+                        <button class="tab-btn" data-tab="automation">Auto</button>
+                        <button class="tab-btn" data-tab="bonus">Bonus</button>
+                    </div>
+                    <div id="upgrade-list"></div>
+                </div>
+
+                <div id="right-panel">
+                    <div id="prestige-panel" class="side-panel">
+                        <h3>Star Essence</h3>
+                        <div class="essence-display">
+                            <span class="essence-icon">✨</span>
+                            <span id="essence-count">0</span>
+                        </div>
+                        <div class="essence-multiplier">+0% all resources</div>
+                        <button id="btn-prestige-now" class="prestige-btn">Prestige Now</button>
+                    </div>
+                    <div id="achievements-section" class="side-panel">
+                        <h3>Achievements</h3>
+                        <div id="achievements-list"></div>
+                    </div>
+                    <div id="combo-display">
+                        <span id="combo-count">x1</span>
+                        <div id="combo-bar-container">
+                            <div id="combo-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bottom-bar">
+                    <button id="prev-planet" class="nav-btn">◀</button>
+                    <div id="planet-selector"></div>
+                    <button id="next-planet" class="nav-btn">▶</button>
+                </div>
+
+                <div id="floating-text-container"></div>
+            </div>
+
+            <!-- PAUSE MENU -->
+            <div id="pause-menu" class="screen overlay">
+                <div class="pause-container">
+                    <h2>Paused</h2>
+                    <button id="btn-resume" class="menu-btn">Resume</button>
+                    <button id="btn-save" class="menu-btn">Save Game</button>
+                    <button id="btn-settings-pause" class="menu-btn">Settings</button>
+                    <button id="btn-mainmenu" class="menu-btn warning">Main Menu</button>
+                </div>
+            </div>
+
+            <!-- SETTINGS -->
+            <div id="settings-screen" class="screen overlay">
+                <div class="settings-container">
+                    <h2>Settings</h2>
+                    <div class="setting-group">
+                        <label>Audio Volume</label>
+                        <input type="range" id="volume-slider" min="0" max="100" value="50">
+                        <span id="volume-value">50%</span>
+                    </div>
+                    <div class="setting-group">
+                        <label>Particle Effects</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="particles-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <label>Floating Numbers</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="floating-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <label>Screen Shake</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="shake-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <label>Autosave</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="autosave-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-group danger-zone">
+                        <button id="btn-reset" class="danger-btn">Reset All Progress</button>
+                        <button id="btn-export" class="menu-btn">Export Save</button>
+                        <button id="btn-import" class="menu-btn">Import Save</button>
+                    </div>
+                    <button id="btn-close-settings" class="confirm-btn">Close</button>
+                </div>
+            </div>
+
+            <!-- STATISTICS -->
+            <div id="stats-screen" class="screen overlay">
+                <div class="stats-container">
+                    <h2>Statistics</h2>
+                    <div id="stats-content">
+                        <div class="stat-category">
+                            <h3>Resources</h3>
+                            <div class="stat-row"><span>Total Mined:</span><span id="stat-total-mined">0</span></div>
+                            <div class="stat-row"><span>Total Spent:</span><span id="stat-total-spent">0</span></div>
+                            <div class="stat-row"><span>Highest Combo:</span><span id="stat-max-combo">0</span></div>
+                        </div>
+                        <div class="stat-category">
+                            <h3>Activity</h3>
+                            <div class="stat-row"><span>Total Clicks:</span><span id="stat-total-clicks">0</span></div>
+                            <div class="stat-row"><span>Time Played:</span><span id="stat-playtime">0:00</span></div>
+                            <div class="stat-row"><span>Asteroids Destroyed:</span><span id="stat-asteroids">0</span></div>
+                        </div>
+                        <div class="stat-category">
+                            <h3>Progress</h3>
+                            <div class="stat-row"><span>Planets Unlocked:</span><span id="stat-planets">1/7</span></div>
+                            <div class="stat-row"><span>Upgrades Bought:</span><span id="stat-upgrades">0</span></div>
+                            <div class="stat-row"><span>Achievements:</span><span id="stat-achievements">0/20</span></div>
+                            <div class="stat-row"><span>Prestige Count:</span><span id="stat-prestige">0</span></div>
+                        </div>
+                    </div>
+                    <button id="btn-close-stats" class="confirm-btn">Close</button>
+                </div>
+            </div>
+
+            <!-- PRESTIGE SCREEN -->
+            <div id="prestige-screen" class="screen overlay">
+                <div class="prestige-container">
+                    <h2>✨ Prestige ✨</h2>
+                    <p class="prestige-desc">Reset your progress to gain permanent Star Essence bonuses!</p>
+                    <div class="prestige-info">
+                        <div class="prestige-current"><span>Current Essence:</span><span id="prestige-current-essence">0</span></div>
+                        <div class="prestige-gain"><span>Essence on Reset:</span><span id="prestige-gain">+0</span></div>
+                        <div class="prestige-bonus"><span>Resource Multiplier:</span><span id="prestige-multiplier">x1.00</span></div>
+                    </div>
+                    <div class="prestige-warning">⚠️ This will reset ALL progress except Star Essence and achievements!</div>
+                    <div class="prestige-actions">
+                        <button id="btn-confirm-prestige" class="prestige-btn">Confirm Prestige</button>
+                        <button id="btn-cancel-prestige" class="menu-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODALS -->
+            <div id="daily-bonus-modal" class="modal hidden">
+                <div class="modal-content bonus-content">
+                    <h2>🎁 Daily Bonus</h2>
+                    <div class="bonus-calendar">
+                        <div class="day" data-day="1"><span>Day 1</span><span class="reward">100💎</span></div>
+                        <div class="day" data-day="2"><span>Day 2</span><span class="reward">250💎</span></div>
+                        <div class="day" data-day="3"><span>Day 3</span><span class="reward">500💎</span></div>
+                        <div class="day" data-day="4"><span>Day 4</span><span class="reward">1000💎</span></div>
+                        <div class="day" data-day="5"><span>Day 5</span><span class="reward">2500💎</span></div>
+                        <div class="day" data-day="6"><span>Day 6</span><span class="reward">5000💎</span></div>
+                        <div class="day current" data-day="7"><span>Day 7</span><span class="reward">✨+1</span></div>
+                    </div>
+                    <button id="btn-claim-bonus" class="confirm-btn">Claim Reward</button>
+                </div>
+            </div>
+
+            <div id="offline-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h2>⏰ Welcome Back!</h2>
+                    <p>While you were away, your miners collected:</p>
+                    <div id="offline-resources">0 Minerals</div>
+                    <div id="offline-time"></div>
+                    <button id="offline-confirm" class="confirm-btn">Collect</button>
+                </div>
+            </div>
+
+            <div id="asteroid-event" class="hidden">
+                <div class="event-content">
+                    <span class="event-icon">☄️</span>
+                    <span class="event-text">Asteroid Shower! Click for bonus resources!</span>
+                </div>
+            </div>
+
+            <div id="toast-container"></div>
+        </div>
+    </div>
+
+    <script>
+// ==========================================
+// PLANET MINER v2.1 - Complete Game Code
+// ==========================================
+
+const CONFIG = {
+    SAVE_KEY: 'planetMiner_v2_save',
+    SETTINGS_KEY: 'planetMiner_v2_settings',
+    DAILY_KEY: 'planetMiner_v2_daily',
+    SAVE_INTERVAL: 30000,
+    OFFLINE_CAP: 8 * 60 * 60 * 1000,
+    COMBO_DECAY: 2000,
+    ASTEROID_CHANCE: 0.0005,
+    FPS: 60,
+    TIME_STEP: 1000 / 60,
+    VERSION: '2.1.0'
+};
+
+const PLANETS = [
+    { id: 'earth', name: 'Terra Prime', resource: 'Stone', icon: '🪨', baseValue: 1, color: '#4a90d9', atmosphere: '#87ceeb', unlockCost: 0, tier: 1 },
+    { id: 'mars', name: 'Ares Station', resource: 'Iron', icon: '⚙️', baseValue: 5, color: '#c1440e', atmosphere: '#ff6b35', unlockCost: 1000, tier: 2 },
+    { id: 'ice', name: 'Cryos VII', resource: 'Crystals', icon: '💎', baseValue: 25, color: '#e0f7fa', atmosphere: '#00e5ff', unlockCost: 10000, tier: 3 },
+    { id: 'toxic', name: 'Venomia', resource: 'Uranium', icon: '☢️', baseValue: 100, color: '#76ff03', atmosphere: '#64dd17', unlockCost: 50000, tier: 4 },
+    { id: 'lava', name: 'Infernus', resource: 'Rare Metals', icon: '🔥', baseValue: 500, color: '#ff3d00', atmosphere: '#ff9100', unlockCost: 250000, tier: 5 },
+    { id: 'gas', name: 'Nebulon', resource: 'Exotic Gas', icon: '🌪️', baseValue: 2500, color: '#e1bee7', atmosphere: '#9c27b0', unlockCost: 1000000, tier: 6 },
+    { id: 'diamond', name: 'Crystallis', resource: 'Star Diamonds', icon: '⭐', baseValue: 15000, color: '#ffffff', atmosphere: '#ffd700', unlockCost: 10000000, tier: 7 }
+];
+
+const UPGRADES = {
+    mining: [
+        { id: 'drill', name: 'Mining Drill', icon: '🔩', baseCost: 10, multiplier: 1.5, effect: 1, desc: '+1/click' },
+        { id: 'laser', name: 'Laser Drill', icon: '🔦', baseCost: 100, multiplier: 1.6, effect: 5, desc: '+5/click' },
+        { id: 'plasma', name: 'Plasma Cutter', icon: '⚡', baseCost: 1000, multiplier: 1.7, effect: 25, desc: '+25/click' },
+        { id: 'quantum', name: 'Quantum Drill', icon: '🔮', baseCost: 10000, multiplier: 1.8, effect: 100, desc: '+100/click' }
+    ],
+    automation: [
+        { id: 'drone', name: 'Mining Drone', icon: '🤖', baseCost: 50, multiplier: 1.5, effect: 1, desc: '+1/sec' },
+        { id: 'robot', name: 'Auto-Miner', icon: '⚙️', baseCost: 500, multiplier: 1.6, effect: 5, desc: '+5/sec' },
+        { id: 'station', name: 'Orbital Station', icon: '🛰️', baseCost: 5000, multiplier: 1.7, effect: 25, desc: '+25/sec' },
+        { id: 'dyson', name: 'Dyson Sphere', icon: '☀️', baseCost: 50000, multiplier: 1.8, effect: 100, desc: '+100/sec' }
+    ],
+    bonus: [
+        { id: 'multiplier', name: 'Rich Veins', icon: '💰', baseCost: 200, multiplier: 2, effect: 0.1, desc: '+10% click' },
+        { id: 'crit', name: 'Critical Strike', icon: '🎯', baseCost: 1000, multiplier: 2.5, effect: 0.05, desc: '+5% crit' },
+        { id: 'speed', name: 'Overclock', icon: '⏩', baseCost: 5000, multiplier: 3, effect: 0.1, desc: '+10% speed' }
+    ]
+};
+
+const ACHIEVEMENTS = [
+    { id: 'first_click', name: 'First Steps', desc: 'First click', icon: '👆', check: s => s.totalClicks >= 1 },
+    { id: 'hundred_clicks', name: 'Click Master', desc: '100 clicks', icon: '🖱️', check: s => s.totalClicks >= 100 },
+    { id: 'thousand_clicks', name: 'Click God', desc: '1,000 clicks', icon: '💪', check: s => s.totalClicks >= 1000 },
+    { id: 'first_upgrade', name: 'Investor', desc: 'First upgrade', icon: '💼', check: s => s.totalUpgrades >= 1 },
+    { id: 'ten_upgrades', name: 'Industrialist', desc: '10 upgrades', icon: '🏭', check: s => s.totalUpgrades >= 10 },
+    { id: 'first_planet', name: 'Explorer', desc: 'Unlock planet', icon: '🚀', check: s => s.unlockedPlanets.length >= 2 },
+    { id: 'all_planets', name: 'Galactic Emperor', desc: 'All planets', icon: '🌌', check: s => s.unlockedPlanets.length >= 7 },
+    { id: 'first_million', name: 'Millionaire', desc: '1M minerals', icon: '💵', check: s => s.totalMined >= 1000000 },
+    { id: 'first_billion', name: 'Billionaire', desc: '1B minerals', icon: '💎', check: s => s.totalMined >= 1000000000 },
+    { id: 'combo_10', name: 'Combo Starter', desc: '10x combo', icon: '🔥', check: s => s.maxCombo >= 10 },
+    { id: 'combo_50', name: 'Combo Master', desc: '50x combo', icon: '⚡', check: s => s.maxCombo >= 50 },
+    { id: 'combo_100', name: 'Combo God', desc: '100x combo', icon: '👑', check: s => s.maxCombo >= 100 },
+    { id: 'asteroid_hunter', name: 'Asteroid Hunter', desc: '10 asteroids', icon: '☄️', check: s => s.asteroidsClicked >= 10 },
+    { id: 'idle_beginner', name: 'Lazy Miner', desc: '1K idle', icon: '😴', check: s => s.idleEarned >= 1000 },
+    { id: 'idle_master', name: 'Sleeping Giant', desc: '1M idle', icon: '🛌', check: s => s.idleEarned >= 1000000 },
+    { id: 'speed_demon', name: 'Speed Demon', desc: '1K/sec', icon: '🏎️', check: s => s.maxPerSec >= 1000 },
+    { id: 'collector', name: 'Collector', desc: '100 upgrades', icon: '📦', check: s => s.totalUpgrades >= 100 },
+    { id: 'first_prestige', name: 'New Beginning', desc: 'First prestige', icon: '✨', check: s => s.prestigeCount >= 1 },
+    { id: 'dedication', name: 'Dedication', desc: '1 hour played', icon: '⏰', check: s => s.playTime >= 3600000 },
+    { id: 'veteran', name: 'Veteran', desc: '24 hours played', icon: '🏆', check: s => s.playTime >= 86400000 }
+];
+
+// ==========================================
+// UTILITIES
+// ==========================================
+const Utils = {
+    formatNumber(num) {
+        if (num < 1000) return Math.floor(num).toString();
+        const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+        const suffixNum = Math.floor(Math.log10(num) / 3);
+        return (num / Math.pow(1000, suffixNum)).toFixed(2) + suffixes[suffixNum];
+    },
+
+    formatTime(ms) {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const h = Math.floor(m / 60);
+        const d = Math.floor(h / 24);
+        if (d > 0) return `${d}d ${h % 24}h`;
+        if (h > 0) return `${h}h ${m % 60}m`;
+        if (m > 0) return `${m}m ${s % 60}s`;
+        return `${s}s`;
+    },
+
+    random(min, max) {
+        return Math.random() * (max - min) + min;
+    },
+
+    pointInCircle(px, py, cx, cy, r) {
+        const dx = px - cx;
+        const dy = py - cy;
+        return dx * dx + dy * dy <= r * r;
+    },
+
+    calculateCost(base, mult, level) {
+        return Math.floor(base * Math.pow(mult, level));
+    },
+
+    round(n) {
+        return (n + 0.5) << 0;
+    }
+};
+
+// ==========================================
+// SAFE STORAGE
+// ==========================================
+const SafeStorage = {
+    isAvailable: false,
+   
+    check() {
+        try {
+            const test = '__storage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            this.isAvailable = true;
+            return true;
+        } catch (e) {
+            console.warn('localStorage unavailable:', e.message);
+            this.isAvailable = false;
+            return false;
+        }
+    },
+   
+    get(key, defaultValue = null) {
+        if (!this.isAvailable) return defaultValue;
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch (e) {
+            console.error('Read error:', e);
+            return defaultValue;
+        }
+    },
+   
+    set(key, value) {
+        if (!this.isAvailable) return false;
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                console.warn('Storage full, clearing...');
+                try {
+                    localStorage.clear();
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return true;
+                } catch (e2) {
+                    alert('Failed to save game - storage full');
+                }
+            }
+            return false;
+        }
+    },
+   
+    remove(key) {
+        if (!this.isAvailable) return;
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {
+            console.error('Delete error:', e);
+        }
+    }
+};
+
+SafeStorage.check();
+
+// ==========================================
+// STATE MACHINE
+// ==========================================
+class StateMachine {
+    constructor(game) {
+        this.game = game;
+        this.state = 'MENU';
+    }
+
+    transition(newState) {
+        // Hide current
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+       
+        // Show new
+        this.state = newState;
+        const screenMap = {
+            'MENU': 'main-menu',
+            'TUTORIAL': 'tutorial-screen',
+            'GAME': 'game-screen',
+            'PAUSE': 'pause-menu',
+            'SETTINGS': 'settings-screen',
+            'STATS': 'stats-screen',
+            'PRESTIGE': 'prestige-screen'
+        };
+       
+        const screenId = screenMap[newState];
+        if (screenId) {
+            document.getElementById(screenId)?.classList.add('active');
+        }
+       
+        // Disable canvas clicks when in menu
+        const canvas = document.getElementById('game-canvas');
+        if (canvas) {
+            canvas.style.pointerEvents = (newState === 'GAME') ? 'auto' : 'none';
+        }
+       
+        // Update UI if needed
+        if (newState === 'STATS') this.game?.updateStatsDisplay();
+        if (newState === 'PRESTIGE') this.game?.updatePrestigeDisplay();
+       
+        console.log('State changed to:', newState);
+    }
+}
+
+// ==========================================
+// PARTICLE SYSTEM
+// ==========================================
+class ParticleSystem {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.particles = [];
+        this.stars = [];
+        this.asteroids = [];
+        this.initStars();
+    }
+
+    initStars() {
+        this.stars = [];
+        for (let i = 0; i < 150; i++) {
+            this.stars.push({
+                x: Utils.round(Math.random() * this.canvas.width),
+                y: Utils.round(Math.random() * this.canvas.height),
+                size: Utils.round(Math.random() * 2 + 0.5),
+                alpha: Math.random() * 0.8 + 0.2,
+                twinkleSpeed: Math.random() * 0.02 + 0.01,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+    }
+
+    createMiningParticles(x, y, color, count = 5) {
+        if (!window.game?.settings?.particles) return;
+       
+        x = Utils.round(x);
+        y = Utils.round(y);
+       
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+            const speed = Utils.random(2, 5);
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,
+                decay: Utils.random(0.01, 0.03),
+                size: Utils.round(Utils.random(2, 6)),
+                color
+            });
+        }
+    }
+
+    createExplosion(x, y, color, count = 15) {
+        if (!window.game?.settings?.particles) return;
+       
+        x = Utils.round(x);
+        y = Utils.round(y);
+       
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Utils.random(3, 8);
+            this.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,
+                decay: Utils.random(0.02, 0.04),
+                size: Utils.round(Utils.random(3, 8)),
+                color
+            });
+        }
+    }
+
+    createAsteroid() {
+        const side = Math.floor(Math.random() * 4);
+        let x, y, vx, vy;
+       
+        switch(side) {
+            case 0: x = Utils.random(0, this.canvas.width); y = -50; vx = Utils.random(-2, 2); vy = Utils.random(2, 5); break;
+            case 1: x = this.canvas.width + 50; y = Utils.random(0, this.canvas.height); vx = Utils.random(-5, -2); vy = Utils.random(-2, 2); break;
+            case 2: x = Utils.random(0, this.canvas.width); y = this.canvas.height + 50; vx = Utils.random(-2, 2); vy = Utils.random(-5, -2); break;
+            case 3: x = -50; y = Utils.random(0, this.canvas.height); vx = Utils.random(2, 5); vy = Utils.random(-2, 2); break;
+        }
+
+        this.asteroids.push({
+            x: Utils.round(x),
+            y: Utils.round(y),
+            vx, vy,
+            size: Utils.round(Utils.random(20, 40)),
+            rotation: 0,
+            rotSpeed: Utils.random(-0.1, 0.1),
+            health: 3,
+            maxHealth: 3
+        });
+
+        // Show event notification
+        const el = document.getElementById('asteroid-event');
+        el.classList.remove('hidden');
+        setTimeout(() => el.classList.add('hidden'), 5000);
+    }
+
+    update() {
+        // Update particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= p.decay;
+            p.vx *= 0.98;
+            p.vy *= 0.98;
+
+            if (p.life <= 0) {
+                this.particles.splice(i, 1);
+            }
+        }
+
+        // Update stars
+        this.stars.forEach(s => {
+            s.phase += s.twinkleSpeed;
+            s.currentAlpha = s.alpha * (0.7 + 0.3 * Math.sin(s.phase));
+        });
+
+        // Update asteroids
+        for (let i = this.asteroids.length - 1; i >= 0; i--) {
+            const a = this.asteroids[i];
+            a.x += a.vx;
+            a.y += a.vy;
+            a.rotation += a.rotSpeed;
+
+            if (a.x < -100 || a.x > this.canvas.width + 100 ||
+                a.y < -100 || a.y > this.canvas.height + 100) {
+                this.asteroids.splice(i, 1);
+            }
+        }
+    }
+
+    draw(ctx) {
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw stars
+        ctx.fillStyle = '#ffffff';
+        this.stars.forEach(s => {
+            ctx.globalAlpha = s.currentAlpha;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Draw particles by color
+        const byColor = {};
+        this.particles.forEach(p => {
+            if (!byColor[p.color]) byColor[p.color] = [];
+            byColor[p.color].push(p);
+        });
+
+        Object.entries(byColor).forEach(([color, parts]) => {
+            ctx.fillStyle = color;
+            parts.forEach(p => {
+                ctx.globalAlpha = p.life;
+                const size = Utils.round(p.size * p.life);
+                ctx.beginPath();
+                ctx.arc(Utils.round(p.x), Utils.round(p.y), size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        });
+
+        ctx.globalAlpha = 1;
+
+        // Draw asteroids
+        this.asteroids.forEach(a => {
+            ctx.save();
+            ctx.translate(Utils.round(a.x), Utils.round(a.y));
+            ctx.rotate(a.rotation);
+           
+            ctx.fillStyle = '#8b7355';
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+           
+            ctx.beginPath();
+            const points = 8;
+            for (let i = 0; i < points; i++) {
+                const angle = (i / points) * Math.PI * 2;
+                const r = a.size * (0.8 + Math.random() * 0.4);
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Health bar
+            const hp = a.health / a.maxHealth;
+            ctx.fillStyle = `hsl(${hp * 120}, 100%, 50%)`;
+            ctx.fillRect(Utils.round(a.x - 20), Utils.round(a.y - a.size - 10), Utils.round(40 * hp), 4);
+        });
+    }
+
+    checkClick(x, y) {
+        for (let i = this.asteroids.length - 1; i >= 0; i--) {
+            const a = this.asteroids[i];
+            if (Utils.pointInCircle(x, y, a.x, a.y, a.size)) {
+                a.health--;
+                this.createMiningParticles(x, y, '#ffaa00', 3);
+               
+                if (a.health <= 0) {
+                    this.createExplosion(a.x, a.y, '#ff6b35', 20);
+                    this.asteroids.splice(i, 1);
+                    return { hit: true, destroyed: true };
+                }
+                return { hit: true, destroyed: false };
+            }
+        }
+        return { hit: false };
+    }
+}
+
+// ==========================================
+// PLANET RENDERER
+// ==========================================
+class PlanetRenderer {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.rotation = 0;
+        this.pulsePhase = 0;
+        this.cache = new Map();
+    }
+
+    update(dt) {
+        this.rotation += 0.001 * dt;
+        this.pulsePhase += 0.002 * dt;
+    }
+
+    draw(planet, cx, cy, radius) {
+        const ctx = this.ctx;
+        const r = Utils.round(radius);
+        const x = Utils.round(cx);
+        const y = Utils.round(cy);
+
+        // Atmosphere glow
+        const atmKey = `atm_${planet.atmosphere}`;
+        if (!this.cache.has(atmKey)) {
+            const g = ctx.createRadialGradient(0, 0, r, 0, 0, r * 1.5);
+            g.addColorStop(0, planet.atmosphere + '40');
+            g.addColorStop(0.5, planet.atmosphere + '20');
+            g.addColorStop(1, 'transparent');
+            this.cache.set(atmKey, g);
+        }
+       
+        ctx.fillStyle = this.cache.get(atmKey);
+        ctx.beginPath();
+        ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Planet body
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(this.rotation);
+
+        const bodyKey = `body_${planet.color}`;
+        if (!this.cache.has(bodyKey)) {
+            const g = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, 0, 0, r);
+            g.addColorStop(0, this.lighten(planet.color, 40));
+            g.addColorStop(0.5, planet.color);
+            g.addColorStop(1, this.darken(planet.color, 40));
+            this.cache.set(bodyKey, g);
+        }
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = this.cache.get(bodyKey);
+        ctx.fill();
+
+        // Surface details
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        const seed = planet.id.charCodeAt(0);
+        for (let i = 0; i < 5; i++) {
+            const ang = (i / 5) * Math.PI * 2 + seed;
+            const d = r * 0.5;
+            ctx.beginPath();
+            ctx.arc(Math.cos(ang) * d, Math.sin(ang) * d, r * (0.15 + (i % 3) * 0.05), 0, Math.PI * 2);
+            ctx.fill();
+        }
+       
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.restore();
+
+        // Pulse ring
+        const pulse = 1 + Math.sin(this.pulsePhase) * 0.05;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 1.3 * pulse, 0, Math.PI * 2);
+        ctx.strokeStyle = planet.atmosphere + '30';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Gas giant ring
+        if (planet.id === 'gas') {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(Math.PI / 6);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, r * 2, r * 0.4, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = planet.atmosphere + '60';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    lighten(c, p) {
+        const n = parseInt(c.slice(1), 16);
+        const a = Math.round(2.55 * p);
+        return '#' + [Math.min(255, (n >> 16) + a), Math.min(255, ((n >> 8) & 0xFF) + a), Math.min(255, (n & 0xFF) + a)]
+            .map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+
+    darken(c, p) {
+        const n = parseInt(c.slice(1), 16);
+        const a = Math.round(2.55 * p);
+        return '#' + [Math.max(0, (n >> 16) - a), Math.max(0, ((n >> 8) & 0xFF) - a), Math.max(0, (n & 0xFF) - a)]
+            .map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+
+    clearCache() {
+        this.cache.clear();
+    }
+}
+
+// ==========================================
+// GAME STATE
+// ==========================================
+class GameState {
+    constructor() {
+        this.reset();
+        this.load();
+    }
+
+    reset() {
+        this.minerals = 0;
+        this.totalMined = 0;
+        this.totalSpent = 0;
+        this.totalClicks = 0;
+        this.currentPlanet = 0;
+        this.unlockedPlanets = ['earth'];
+        this.upgrades = {};
+        this.achievements = [];
+        this.lastSave = Date.now();
+        this.startTime = Date.now();
+        this.playTime = 0;
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.lastClick = 0;
+        this.asteroidsClicked = 0;
+        this.idleEarned = 0;
+        this.maxPerSec = 0;
+        this.totalUpgrades = 0;
+        this.prestigeCount = 0;
+        this.essence = 0;
+       
+        Object.keys(UPGRADES).forEach(cat => {
+            UPGRADES[cat].forEach(u => this.upgrades[u.id] = 0);
+        });
+    }
+
+    get prestigeMultiplier() {
+        return 1 + (this.essence * 0.05);
+    }
+
+    getClickValue() {
+        const planet = PLANETS[this.currentPlanet];
+        let val = planet.baseValue;
+       
+        UPGRADES.mining.forEach(u => {
+            val += u.effect * (this.upgrades[u.id] || 0);
+        });
+
+        const mult = this.upgrades['multiplier'] || 0;
+        val *= (1 + mult * 0.1);
+        val *= (1 + this.combo * 0.1);
+        val *= this.prestigeMultiplier;
+       
+        return Math.max(1, Math.floor(val));
+    }
+
+    getPerSecond() {
+        let val = 0;
+        UPGRADES.automation.forEach(u => {
+            val += u.effect * (this.upgrades[u.id] || 0);
+        });
+       
+        const speed = this.upgrades['speed'] || 0;
+        val *= (1 + speed * 0.1);
+        val *= PLANETS[this.currentPlanet].baseValue;
+        val *= this.prestigeMultiplier;
+       
+        return val;
+    }
+
+    getCritChance() {
+        return Math.min(0.5, (this.upgrades['crit'] || 0) * 0.05);
+    }
+
+    click() {
+        this.totalClicks++;
+        const now = Date.now();
+       
+        if (now - this.lastClick < CONFIG.COMBO_DECAY) {
+            this.combo++;
+        } else {
+            this.combo = 1;
+        }
+        this.lastClick = now;
+        this.maxCombo = Math.max(this.maxCombo, this.combo);
+
+        let val = this.getClickValue();
+        const crit = Math.random() < this.getCritChance();
+        if (crit) val *= 2;
+
+        this.minerals += val;
+        this.totalMined += val;
+       
+        return { value: val, crit, combo: this.combo };
+    }
+
+    buyUpgrade(cat, id) {
+        const upg = UPGRADES[cat].find(u => u.id === id);
+        if (!upg) return false;
+       
+        const lvl = this.upgrades[id] || 0;
+        const cost = Utils.calculateCost(upg.baseCost, upg.multiplier, lvl);
+       
+        if (this.minerals >= cost) {
+            this.minerals -= cost;
+            this.totalSpent += cost;
+            this.upgrades[id] = lvl + 1;
+            this.totalUpgrades++;
+            return true;
+        }
+        return false;
+    }
+
+    unlockPlanet(id) {
+        const p = PLANETS.find(x => x.id === id);
+        if (!p || this.unlockedPlanets.includes(id)) return false;
+       
+        if (this.minerals >= p.unlockCost) {
+            this.minerals -= p.unlockCost;
+            this.totalSpent += p.unlockCost;
+            this.unlockedPlanets.push(id);
+            return true;
+        }
+        return false;
+    }
+
+    calculatePrestigeGain() {
+        return Math.floor(Math.sqrt(this.totalMined / 1e9));
+    }
+
+    prestige() {
+        const gain = this.calculatePrestigeGain();
+        if (gain <= 0) return false;
+       
+        this.essence += gain;
+        this.prestigeCount++;
+       
+        this.minerals = 0;
+        this.currentPlanet = 0;
+        this.unlockedPlanets = ['earth'];
+        this.upgrades = {};
+        Object.keys(UPGRADES).forEach(cat => {
+            UPGRADES[cat].forEach(u => this.upgrades[u.id] = 0);
+        });
+       
+        this.totalUpgrades = 0;
+        this.combo = 0;
+        this.lastClick = 0;
+       
+        return true;
+    }
+
+    checkAchievements() {
+        const newAch = [];
+        ACHIEVEMENTS.forEach(a => {
+            if (!this.achievements.includes(a.id) && a.check(this)) {
+                this.achievements.push(a.id);
+                newAch.push(a);
+            }
+        });
+        return newAch;
+    }
+
+    save() {
+        const data = {
+            minerals: this.minerals,
+            totalMined: this.totalMined,
+            totalSpent: this.totalSpent,
+            totalClicks: this.totalClicks,
+            currentPlanet: this.currentPlanet,
+            unlockedPlanets: this.unlockedPlanets,
+            upgrades: this.upgrades,
+            achievements: this.achievements,
+            lastSave: Date.now(),
+            startTime: this.startTime,
+            playTime: this.playTime + (Date.now() - this.startTime),
+            maxCombo: this.maxCombo,
+            asteroidsClicked: this.asteroidsClicked,
+            idleEarned: this.idleEarned,
+            maxPerSec: this.maxPerSec,
+            totalUpgrades: this.totalUpgrades,
+            prestigeCount: this.prestigeCount,
+            essence: this.essence,
+            version: CONFIG.VERSION
+        };
+        SafeStorage.set(CONFIG.SAVE_KEY, data);
+    }
+
+    load() {
+        const d = SafeStorage.get(CONFIG.SAVE_KEY);
+        if (!d) return;
+       
+        try {
+            this.minerals = d.minerals || 0;
+            this.totalMined = d.totalMined || 0;
+            this.totalSpent = d.totalSpent || 0;
+            this.totalClicks = d.totalClicks || 0;
+            this.currentPlanet = d.currentPlanet || 0;
+            this.unlockedPlanets = d.unlockedPlanets || ['earth'];
+            this.upgrades = d.upgrades || {};
+            this.achievements = d.achievements || [];
+            this.playTime = d.playTime || 0;
+            this.maxCombo = d.maxCombo || 0;
+            this.asteroidsClicked = d.asteroidsClicked || 0;
+            this.idleEarned = d.idleEarned || 0;
+            this.maxPerSec = d.maxPerSec || 0;
+            this.totalUpgrades = d.totalUpgrades || 0;
+            this.prestigeCount = d.prestigeCount || 0;
+            this.essence = d.essence || 0;
+            this.startTime = Date.now();
+           
+            const offline = Math.min(Date.now() - (d.lastSave || Date.now()), CONFIG.OFFLINE_CAP);
+            if (offline > 60000) {
+                const earned = this.getPerSecond() * (offline / 1000) * 0.5;
+                if (earned > 0) {
+                    this.showOfflineModal(earned, offline);
+                    this.minerals += earned;
+                    this.totalMined += earned;
+                    this.idleEarned += earned;
+                }
+            }
+        } catch (e) {
+            console.error('Load failed:', e);
+        }
+    }
+
+    showOfflineModal(amount, time) {
+        const modal = document.getElementById('offline-modal');
+        document.getElementById('offline-resources').textContent = `${Utils.formatNumber(amount)} Minerals`;
+        document.getElementById('offline-time').textContent = `Away for ${Utils.formatTime(time)}`;
+        modal.classList.remove('hidden');
+       
+        document.getElementById('offline-confirm').onclick = () => {
+            modal.classList.add('hidden');
+        };
+    }
+
+    export() {
+        return btoa(JSON.stringify({
+            state: {
+                minerals: this.minerals,
+                totalMined: this.totalMined,
+                totalSpent: this.totalSpent,
+                totalClicks: this.totalClicks,
+                currentPlanet: this.currentPlanet,
+                unlockedPlanets: this.unlockedPlanets,
+                upgrades: this.upgrades,
+                achievements: this.achievements,
+                playTime: this.playTime + (Date.now() - this.startTime),
+                maxCombo: this.maxCombo,
+                asteroidsClicked: this.asteroidsClicked,
+                idleEarned: this.idleEarned,
+                maxPerSec: this.maxPerSec,
+                totalUpgrades: this.totalUpgrades,
+                prestigeCount: this.prestigeCount,
+                essence: this.essence
+            },
+            daily: localStorage.getItem(CONFIG.DAILY_KEY),
+            version: CONFIG.VERSION
+        }));
+    }
+
+    import(data) {
+        try {
+            const parsed = JSON.parse(atob(data));
+            if (parsed.version !== CONFIG.VERSION) throw new Error('Version mismatch');
+           
+            const s = parsed.state;
+            this.minerals = s.minerals;
+            this.totalMined = s.totalMined;
+            this.totalSpent = s.totalSpent;
+            this.totalClicks = s.totalClicks;
+            this.currentPlanet = s.currentPlanet;
+            this.unlockedPlanets = s.unlockedPlanets;
+            this.upgrades = s.upgrades;
+            this.achievements = s.achievements;
+            this.playTime = s.playTime;
+            this.maxCombo = s.maxCombo;
+            this.asteroidsClicked = s.asteroidsClicked;
+            this.idleEarned = s.idleEarned;
+            this.maxPerSec = s.maxPerSec;
+            this.totalUpgrades = s.totalUpgrades;
+            this.prestigeCount = s.prestigeCount;
+            this.essence = s.essence;
+            this.startTime = Date.now();
+           
+            if (parsed.daily) localStorage.setItem(CONFIG.DAILY_KEY, parsed.daily);
+            return true;
+        } catch (e) {
+            console.error('Import failed:', e);
+            return false;
+        }
+    }
+}
+
+// ==========================================
+// DAILY BONUS
+// ==========================================
+class DailyBonus {
+    constructor() {
+        this.load();
+    }
+
+    load() {
+        const saved = SafeStorage.get(CONFIG.DAILY_KEY);
+        if (saved) {
+            this.lastClaim = saved.lastClaim || 0;
+            this.streak = saved.streak || 0;
+        } else {
+            this.lastClaim = 0;
+            this.streak = 0;
+        }
+    }
+
+    save() {
+        SafeStorage.set(CONFIG.DAILY_KEY, {
+            lastClaim: this.lastClaim,
+            streak: this.streak
+        });
+    }
+
+    canClaim() {
+        const now = Date.now();
+        return now - this.lastClaim > 20 * 60 * 60 * 1000;
+    }
+
+    getReward() {
+        const rewards = [100, 250, 500, 1000, 2500, 5000, { essence: 1 }];
+        const day = Math.min(this.streak % 7, 6);
+        return rewards[day];
+    }
+
+    claim() {
+        if (!this.canClaim()) return null;
+       
+        const reward = this.getReward();
+        const now = Date.now();
+       
+        if (now - this.lastClaim < 48 * 60 * 60 * 1000) {
+            this.streak++;
+        } else {
+            this.streak = 1;
+        }
+       
+        this.lastClaim = now;
+        this.save();
+        return reward;
+    }
+
+    getTimeUntilNext() {
+        return Math.max(0, this.lastClaim + 24 * 60 * 60 * 1000 - Date.now());
+    }
+}
+
+// ==========================================
+// UI MANAGER
+// ==========================================
+class UIManager {
+    constructor(game) {
+        this.game = game;
+        this.currentTab = 'mining';
+        this.tutStep = 1;
+        this.init();
+    }
+
+    init() {
+        this.setupListeners();
+        this.renderPlanets();
+        this.renderUpgrades();
+        this.renderAchievements();
+    }
+
+    setupListeners() {
+        // Main menu
+        document.getElementById('btn-continue')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('GAME');
+        });
+       
+        document.getElementById('btn-newgame')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('TUTORIAL');
+        });
+       
+        document.getElementById('btn-settings')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('SETTINGS');
+        });
+       
+        document.getElementById('btn-stats')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('STATS');
+        });
+       
+        document.getElementById('btn-help')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('TUTORIAL');
+        });
+       
+        document.getElementById('btn-prestige-menu')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('PRESTIGE');
+        });
+
+        // Pause
+        document.getElementById('btn-pause')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('PAUSE');
+        });
+       
+        document.getElementById('btn-resume')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('GAME');
+        });
+       
+        document.getElementById('btn-mainmenu')?.addEventListener('click', () => {
+            this.game.state.save();
+            this.game.stateMachine.transition('MENU');
+        });
+       
+        document.getElementById('btn-save')?.addEventListener('click', () => {
+            this.game.state.save();
+            this.showToast('Game Saved!', 'success');
+        });
+
+        // Settings
+        document.getElementById('btn-close-settings')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('MENU');
+        });
+       
+        document.getElementById('btn-settings-pause')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('SETTINGS');
+        });
+       
+        document.getElementById('volume-slider')?.addEventListener('input', (e) => {
+            this.game.settings.volume = e.target.value / 100;
+            document.getElementById('volume-value').textContent = e.target.value + '%';
+        });
+       
+        ['particles', 'floating', 'shake', 'autosave'].forEach(id => {
+            document.getElementById(`${id}-toggle`)?.addEventListener('change', (e) => {
+                this.game.settings[id] = e.target.checked;
+            });
+        });
+       
+        document.getElementById('btn-reset')?.addEventListener('click', () => {
+            if (confirm('Are you sure? This will delete ALL progress forever!')) {
+                SafeStorage.remove(CONFIG.SAVE_KEY);
+                SafeStorage.remove(CONFIG.DAILY_KEY);
+                this.game.state.reset();
+                this.showToast('Progress Reset', 'info');
+                this.game.stateMachine.transition('MENU');
+            }
+        });
+       
+        document.getElementById('btn-export')?.addEventListener('click', () => {
+            const data = this.game.state.export();
+            navigator.clipboard.writeText(data).then(() => {
+                this.showToast('Save code copied!', 'success');
+            });
+        });
+       
+        document.getElementById('btn-import')?.addEventListener('click', () => {
+            const data = prompt('Paste your save code:');
+            if (data && this.game.state.import(data)) {
+                this.showToast('Save imported!', 'success');
+                this.renderPlanets();
+                this.renderUpgrades();
+            } else {
+                this.showToast('Invalid save code!', 'error');
+            }
+        });
+
+        // Stats
+        document.getElementById('btn-close-stats')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('MENU');
+        });
+
+        // Prestige
+        document.getElementById('btn-confirm-prestige')?.addEventListener('click', () => {
+            if (this.game.state.prestige()) {
+                this.showToast(`Prestige! +${this.game.state.essence} Essence`, 'success');
+                this.game.planetRenderer.clearCache();
+                this.game.stateMachine.transition('GAME');
+            }
+        });
+       
+        document.getElementById('btn-cancel-prestige')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('MENU');
+        });
+       
+        document.getElementById('btn-prestige-now')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('PRESTIGE');
+        });
+
+        // Daily bonus
+        document.getElementById('daily-bonus-btn')?.addEventListener('click', () => {
+            this.showDailyBonus();
+        });
+       
+        document.getElementById('btn-claim-bonus')?.addEventListener('click', () => {
+            const reward = this.game.daily.claim();
+            if (reward) {
+                if (typeof reward === 'number') {
+                    this.game.state.minerals += reward;
+                    this.game.state.totalMined += reward;
+                    this.showToast(`Claimed ${reward} minerals!`, 'success');
+                } else {
+                    this.game.state.essence += reward.essence;
+                    this.showToast(`Claimed ${reward.essence} Star Essence!`, 'success');
+                }
+                document.getElementById('daily-bonus-modal').classList.add('hidden');
+                this.updateUI();
+            }
+        });
+
+        // Stats toggle
+        document.getElementById('stats-toggle')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('STATS');
+        });
+
+        // Upgrade tabs
+        document.querySelectorAll('#upgrade-tabs .tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#upgrade-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.currentTab = e.target.dataset.tab;
+                this.renderUpgrades();
+            });
+        });
+
+        // Planet navigation
+        document.getElementById('prev-planet')?.addEventListener('click', () => {
+            if (this.game.state.currentPlanet > 0) {
+                this.game.state.currentPlanet--;
+                this.game.planetRenderer.rotation = 0;
+                this.renderPlanets();
+            }
+        });
+       
+        document.getElementById('next-planet')?.addEventListener('click', () => {
+            if (this.game.state.currentPlanet < PLANETS.length - 1) {
+                const next = PLANETS[this.game.state.currentPlanet + 1];
+                if (this.game.state.unlockedPlanets.includes(next.id)) {
+                    this.game.state.currentPlanet++;
+                    this.game.planetRenderer.rotation = 0;
+                    this.renderPlanets();
+                }
+            }
+        });
+
+        // Tutorial
+        document.getElementById('tut-prev')?.addEventListener('click', () => {
+            if (this.tutStep > 1) {
+                this.tutStep--;
+                this.updateTutorial();
+            }
+        });
+       
+        document.getElementById('tut-next')?.addEventListener('click', () => {
+            if (this.tutStep < 4) {
+                this.tutStep++;
+                this.updateTutorial();
+            } else {
+                this.game.stateMachine.transition('GAME');
+            }
+        });
+       
+        document.getElementById('tut-skip')?.addEventListener('click', () => {
+            this.game.stateMachine.transition('GAME');
+        });
+    }
+
+    updateTutorial() {
+        document.querySelectorAll('.tutorial-step').forEach(s => s.classList.remove('active'));
+        document.querySelector(`.tutorial-step[data-step="${this.tutStep}"]`)?.classList.add('active');
+        document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i + 1 === this.tutStep));
+        document.getElementById('tut-prev').disabled = this.tutStep === 1;
+        document.getElementById('tut-next').textContent = this.tutStep === 4 ? 'Start Game' : 'Next';
+    }
+
+    renderPlanets() {
+        const container = document.getElementById('planet-selector');
+        if (!container) return;
+       
+        container.innerHTML = '';
+       
+        PLANETS.forEach((p, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'planet-btn';
+            btn.dataset.name = p.name;
+           
+            const unlocked = this.game.state.unlockedPlanets.includes(p.id);
+            const active = i === this.game.state.currentPlanet;
+           
+            if (!unlocked) btn.classList.add('locked');
+            if (active) btn.classList.add('active');
+           
+            btn.style.background = `radial-gradient(circle at 30% 30%, ${p.color}, #000)`;
+           
+            btn.addEventListener('click', () => {
+                if (unlocked) {
+                    this.game.state.currentPlanet = i;
+                    this.renderPlanets();
+                } else if (this.game.state.unlockPlanet(p.id)) {
+                    this.showToast(`Unlocked ${p.name}!`, 'success');
+                    this.renderPlanets();
+                }
+            });
+           
+            container.appendChild(btn);
+        });
+       
+        document.getElementById('prev-planet').disabled = this.game.state.currentPlanet === 0;
+        const next = PLANETS[this.game.state.currentPlanet + 1];
+        document.getElementById('next-planet').disabled =
+            this.game.state.currentPlanet >= PLANETS.length - 1 ||
+            !this.game.state.unlockedPlanets.includes(next?.id);
+    }
+
+    renderUpgrades() {
+        const container = document.getElementById('upgrade-list');
+        if (!container) return;
+       
+        container.innerHTML = '';
+        const upgrades = UPGRADES[this.currentTab] || [];
+       
+        upgrades.forEach(u => {
+            const lvl = this.game.state.upgrades[u.id] || 0;
+            const cost = Utils.calculateCost(u.baseCost, u.multiplier, lvl);
+            const canAfford = this.game.state.minerals >= cost;
+           
+            const div = document.createElement('div');
+            div.className = `upgrade-item ${canAfford ? '' : 'locked'}`;
+            div.innerHTML = `
+                <div class="upgrade-level">Lvl ${lvl}</div>
+                <div class="upgrade-header">
+                    <div class="upgrade-icon">${u.icon}</div>
+                    <div class="upgrade-info">
+                        <h4>${u.name}</h4>
+                        <p>${u.desc}</p>
+                    </div>
+                </div>
+                <div class="upgrade-cost ${canAfford ? 'affordable' : ''}">
+                    💎 ${Utils.formatNumber(cost)}
+                </div>
+            `;
+           
+            div.addEventListener('click', () => {
+                if (this.game.state.buyUpgrade(this.currentTab, u.id)) {
+                    this.renderUpgrades();
+                    this.game.audio.playUpgrade();
+                }
+            });
+           
+            container.appendChild(div);
+        });
+    }
+
+    renderAchievements() {
+        const container = document.getElementById('achievements-list');
+        if (!container) return;
+       
+        container.innerHTML = '';
+       
+        ACHIEVEMENTS.slice(0, 5).forEach(a => {
+            const unlocked = this.game.state.achievements.includes(a.id);
+            const div = document.createElement('div');
+            div.className = `achievement ${unlocked ? 'unlocked' : ''}`;
+            div.innerHTML = `
+                <span class="achievement-icon">${unlocked ? a.icon : '🔒'}</span>
+                <span>${a.name}</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    updateUI() {
+        const s = this.game.state;
+        const p = PLANETS[s.currentPlanet];
+       
+        document.getElementById('resource-count').textContent = Utils.formatNumber(Math.floor(s.minerals));
+        document.getElementById('resource-name').textContent = p.resource;
+        document.getElementById('resource-icon').textContent = p.icon;
+       
+        const perSec = s.getPerSecond();
+        document.getElementById('resource-per-sec').textContent = `(+${Utils.formatNumber(perSec)}/s)`;
+        s.maxPerSec = Math.max(s.maxPerSec, perSec);
+       
+        document.getElementById('current-planet-name').textContent = p.name;
+        document.getElementById('planet-tier').textContent = `Tier ${p.tier}`;
+       
+        document.getElementById('combo-count').textContent = `x${s.combo}`;
+        const comboProgress = Math.max(0, 1 - (Date.now() - s.lastClick) / CONFIG.COMBO_DECAY);
+        document.getElementById('combo-bar').style.width = `${comboProgress * 100}%`;
+       
+        document.getElementById('essence-count').textContent = s.essence;
+        document.querySelector('.essence-multiplier').textContent = `+${((s.prestigeMultiplier - 1) * 100).toFixed(0)}% all resources`;
+       
+        this.renderUpgrades();
+    }
+
+    showFloatingText(x, y, text, type = 'normal') {
+        if (!this.game.settings.floating) return;
+       
+        const container = document.getElementById('floating-text-container');
+        const el = document.createElement('div');
+        el.className = `floating-text ${type}`;
+        el.textContent = text;
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.style.transform = `translateX(${Utils.random(-20, 20)}px)`;
+       
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 1500);
+    }
+
+    showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+       
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    showDailyBonus() {
+        const modal = document.getElementById('daily-bonus-modal');
+        const canClaim = this.game.daily.canClaim();
+       
+        document.querySelectorAll('.day').forEach((d, i) => {
+            d.classList.remove('current', 'claimed');
+            if (i < this.game.daily.streak % 7) d.classList.add('claimed');
+            if (i === this.game.daily.streak % 7) d.classList.add('current');
+        });
+       
+        const btn = document.getElementById('btn-claim-bonus');
+        btn.disabled = !canClaim;
+        btn.textContent = canClaim ? 'Claim Reward' : `Next in ${Utils.formatTime(this.game.daily.getTimeUntilNext())}`;
+       
+        modal.classList.remove('hidden');
+    }
+}
+
+// ==========================================
+// AUDIO MANAGER
+// ==========================================
+class AudioManager {
+    constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.volume = 0.5;
+    }
+
+    init() {
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+
+    playTone(freq, duration, type = 'sine', vol = 0.1) {
+        if (!this.ctx || !this.enabled) return;
+       
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+       
+        osc.frequency.value = freq;
+        osc.type = type;
+       
+        const v = vol * this.volume;
+        gain.gain.setValueAtTime(v, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+       
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+       
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    playClick() {
+        this.playTone(800, 0.1, 'square', 0.1);
+    }
+
+    playUpgrade() {
+        this.playTone(600, 0.2, 'sine', 0.15);
+        setTimeout(() => this.playTone(800, 0.2, 'sine', 0.15), 100);
+        setTimeout(() => this.playTone(1000, 0.3, 'sine', 0.15), 200);
+    }
+
+    playExplosion() {
+        if (!this.ctx || !this.enabled) return;
+       
+        const bufferSize = this.ctx.sampleRate * 0.3;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+       
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+       
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+       
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.2 * this.volume, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+       
+        noise.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start();
+    }
+}
+
+// ==========================================
+// MAIN GAME CLASS
+// ==========================================
+class PlanetMiner {
+    constructor() {
+        // Get canvases
+        this.bgCanvas = document.getElementById('bg-canvas');
+        this.gameCanvas = document.getElementById('game-canvas');
+       
+        if (!this.bgCanvas || !this.gameCanvas) {
+            console.error('Canvas elements not found!');
+            return;
+        }
+       
+        this.bgCtx = this.bgCanvas.getContext('2d');
+        this.ctx = this.gameCanvas.getContext('2d');
+       
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+       
+        // Initialize systems
+        this.stateMachine = new StateMachine(this);
+        this.state = new GameState();
+        this.particles = new ParticleSystem(this.bgCanvas);
+        this.planetRenderer = new PlanetRenderer(this.gameCanvas);
+        this.ui = new UIManager(this);
+        this.audio = new AudioManager();
+        this.daily = new DailyBonus();
+       
+        // Settings
+        this.settings = {
+            volume: 0.5,
+            particles: true,
+            floating: true,
+            shake: true,
+            autosave: true
+        };
+        this.loadSettings();
+       
+        // Timers
+        this.lastTime = 0;
+        this.accumulated = 0;
+        this.asteroidTimer = 0;
+        this.saveTimer = 0;
+       
+        this.setupInput();
+        this.checkContinueButton();
+       
+        // Start loop
+        requestAnimationFrame(t => this.loop(t));
+       
+        console.log('Planet Miner v2.1 initialized');
+    }
+
+    resize() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+       
+        this.bgCanvas.width = w;
+        this.bgCanvas.height = h;
+        this.gameCanvas.width = w;
+        this.gameCanvas.height = h;
+       
+        this.particles.initStars();
+        this.planetRenderer.clearCache();
+    }
+
+    loadSettings() {
+        const saved = SafeStorage.get(CONFIG.SETTINGS_KEY);
+        if (saved) {
+            this.settings = { ...this.settings, ...saved };
+        }
+       
+        document.getElementById('volume-slider').value = this.settings.volume * 100;
+        document.getElementById('volume-value').textContent = Math.round(this.settings.volume * 100) + '%';
+        ['particles', 'floating', 'shake', 'autosave'].forEach(id => {
+            const el = document.getElementById(`${id}-toggle`);
+            if (el) el.checked = this.settings[id];
+        });
+    }
+
+    saveSettings() {
+        SafeStorage.set(CONFIG.SETTINGS_KEY, this.settings);
+    }
+
+    checkContinueButton() {
+        const hasSave = SafeStorage.get(CONFIG.SAVE_KEY);
+        const btn = document.getElementById('btn-continue');
+        if (btn) btn.classList.toggle('hidden', !hasSave);
+    }
+
+    setupInput() {
+        const handleClick = (e) => {
+            if (this.stateMachine.state !== 'GAME') return;
+           
+            const rect = this.gameCanvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+            const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+           
+            // Check asteroids
+            const asteroid = this.particles.checkClick(x, y);
+            if (asteroid.hit) {
+                if (asteroid.destroyed) {
+                    const reward = 100 * (this.state.currentPlanet + 1);
+                    this.state.minerals += reward;
+                    this.state.totalMined += reward;
+                    this.state.asteroidsClicked++;
+                    this.ui.showFloatingText(x, y, `+${Utils.formatNumber(reward)}`, 'critical');
+                    this.audio.playExplosion();
+                }
+                return;
+            }
+           
+            // Check planet
+            const cx = this.gameCanvas.width / 2;
+            const cy = this.gameCanvas.height / 2;
+            const r = Math.min(this.gameCanvas.width, this.gameCanvas.height) * 0.15;
+           
+            if (Utils.pointInCircle(x, y, cx, cy, r)) {
+                const result = this.state.click();
+                const planet = PLANETS[this.state.currentPlanet];
+               
+                this.particles.createMiningParticles(x, y, planet.color, 8);
+               
+                const text = result.crit ? `CRIT! +${Utils.formatNumber(result.value)}` : `+${Utils.formatNumber(result.value)}`;
+                const type = result.crit ? 'critical' : (result.combo > 1 ? 'combo' : 'normal');
+                this.ui.showFloatingText(x, y - 20, text, type);
+               
+                this.audio.playClick();
+               
+                if (result.crit && this.settings.shake) {
+                    this.gameCanvas.style.transform = `translate(${Utils.random(-5, 5)}px, ${Utils.random(-5, 5)}px)`;
+                    setTimeout(() => this.gameCanvas.style.transform = '', 100);
+                }
+            }
+        };
+
+        this.gameCanvas.addEventListener('mousedown', handleClick);
+        this.gameCanvas.addEventListener('touchstart', e => { e.preventDefault(); handleClick(e); });
+        this.gameCanvas.addEventListener('contextmenu', e => e.preventDefault());
+    }
+
+    updateStatsDisplay() {
+        const s = this.state;
+        document.getElementById('stat-total-mined').textContent = Utils.formatNumber(s.totalMined);
+        document.getElementById('stat-total-spent').textContent = Utils.formatNumber(s.totalSpent);
+        document.getElementById('stat-max-combo').textContent = s.maxCombo;
+        document.getElementById('stat-total-clicks').textContent = Utils.formatNumber(s.totalClicks);
+        document.getElementById('stat-playtime').textContent = Utils.formatTime(s.playTime + (Date.now() - s.startTime));
+        document.getElementById('stat-asteroids').textContent = s.asteroidsClicked;
+        document.getElementById('stat-planets').textContent = `${s.unlockedPlanets.length}/${PLANETS.length}`;
+        document.getElementById('stat-upgrades').textContent = s.totalUpgrades;
+        document.getElementById('stat-achievements').textContent = `${s.achievements.length}/${ACHIEVEMENTS.length}`;
+        document.getElementById('stat-prestige').textContent = s.prestigeCount;
+    }
+
+    updatePrestigeDisplay() {
+        const s = this.state;
+        document.getElementById('prestige-current-essence').textContent = s.essence;
+        document.getElementById('prestige-gain').textContent = '+' + s.calculatePrestigeGain();
+        document.getElementById('prestige-multiplier').textContent = 'x' + s.prestigeMultiplier.toFixed(2);
+    }
+
+    update(dt) {
+        if (this.stateMachine.state !== 'GAME') return;
+       
+        // Combo decay
+        if (this.state.combo > 0 && Date.now() - this.state.lastClick > CONFIG.COMBO_DECAY) {
+            this.state.combo = 0;
+        }
+       
+        // Idle income
+        const perSec = this.state.getPerSecond();
+        if (perSec > 0) {
+            const earned = perSec * (dt / 1000);
+            this.state.minerals += earned;
+            this.state.totalMined += earned;
+            this.state.idleEarned += earned;
+        }
+       
+        // Asteroids
+        this.asteroidTimer += dt;
+        if (this.asteroidTimer > 1000 && Math.random() < CONFIG.ASTEROID_CHANCE * this.asteroidTimer) {
+            this.particles.createAsteroid();
+            this.asteroidTimer = 0;
+        }
+       
+        // Achievements
+        const newAch = this.state.checkAchievements();
+        newAch.forEach(a => {
+            this.ui.showToast(`Achievement: ${a.name}`, 'success');
+            this.ui.renderAchievements();
+        });
+       
+        // Auto-save
+        if (this.settings.autosave) {
+            this.saveTimer += dt;
+            if (this.saveTimer > CONFIG.SAVE_INTERVAL) {
+                this.state.save();
+                this.saveSettings();
+                this.saveTimer = 0;
+            }
+        }
+       
+        // Update UI
+        this.ui.updateUI();
+    }
+
+    draw() {
+        this.ctx.clearRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+       
+        if (this.stateMachine.state !== 'GAME') return;
+       
+        const planet = PLANETS[this.state.currentPlanet];
+        const cx = this.gameCanvas.width / 2;
+        const cy = this.gameCanvas.height / 2;
+        const r = Math.min(this.gameCanvas.width, this.gameCanvas.height) * 0.15;
+       
+        this.planetRenderer.draw(planet, cx, cy, r);
+    }
+
+    loop(timestamp) {
+        if (this.lastTime === 0) this.lastTime = timestamp;
+        let dt = timestamp - this.lastTime;
+        this.lastTime = timestamp;
+       
+        dt = Math.min(dt, 1000);
+        this.accumulated += dt;
+       
+        while (this.accumulated >= CONFIG.TIME_STEP) {
+            this.particles.update();
+            this.planetRenderer.update(CONFIG.TIME_STEP);
+            this.update(CONFIG.TIME_STEP);
+            this.accumulated -= CONFIG.TIME_STEP;
+        }
+       
+        this.particles.draw(this.bgCtx);
+        this.draw();
+       
+        requestAnimationFrame(t => this.loop(t));
+    }
+}
+
+// ==========================================
+// INITIALIZATION
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    window.game = new PlanetMiner();
+   
+    // Resume audio context on first interaction
+    document.addEventListener('click', () => {
+        if (window.game?.audio?.ctx?.state === 'suspended') {
+            window.game.audio.ctx.resume();
+        }
+    }, { once: true });
+});
+
+// Visibility handling
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && window.game) {
+        window.game.state.lastClick = Date.now();
+    }
+});
+
+// Before unload
+window.addEventListener('beforeunload', () => {
+    if (window.game?.state) {
+        window.game.state.save();
+        window.game.saveSettings();
+    }
+});
+    </script>
+</body>
+</html>
+
+ 
