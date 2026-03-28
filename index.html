@@ -1,0 +1,4147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ocean Overlord: Legendary Depths</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial;
+}
+
+body{
+background:#00121a;
+overflow:hidden;
+color:white;
+}
+
+canvas{
+display:block;
+}
+
+#ui{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+pointer-events:none;
+}
+
+#topBar{
+position:absolute;
+top:10px;
+left:50%;
+transform:translateX(-50%);
+width:600px;
+height:60px;
+background:rgba(0,0,0,0.5);
+border-radius:10px;
+padding:10px;
+}
+
+#xpBar{
+width:100%;
+height:10px;
+background:#111;
+border-radius:5px;
+overflow:hidden;
+}
+
+#xpFill{
+height:100%;
+width:0%;
+background:linear-gradient(90deg,#00e1ff,#0077ff);
+}
+
+#coins{
+position:absolute;
+top:20px;
+right:40px;
+font-size:20px;
+}
+
+#abilities{
+position:absolute;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+display:flex;
+gap:10px;
+}
+
+.ability{
+width:60px;
+height:60px;
+background:rgba(0,0,0,0.6);
+border-radius:10px;
+border:2px solid rgba(255,255,255,0.2);
+}
+
+#menu{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#000c;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+gap:20px;
+}
+
+button{
+padding:15px 30px;
+font-size:20px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+background:#008cff;
+color:white;
+}
+
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="ui">
+
+<div id="topBar">
+<div id="xpBar">
+<div id="xpFill"></div>
+</div>
+</div>
+
+<div id="coins">Coins: 0</div>
+
+<div id="abilities">
+<div class="ability"></div>
+<div class="ability"></div>
+<div class="ability"></div>
+<div class="ability"></div>
+</div>
+
+</div>
+
+<div id="menu">
+<h1>OCEAN OVERLORD</h1>
+<button id="startBtn">Start Game</button>
+</div>
+
+<script>
+
+const canvas=document.getElementById("game")
+const ctx=canvas.getContext("2d")
+
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
+
+const GAME_WIDTH=canvas.width
+const GAME_HEIGHT=canvas.height
+
+let lastTime=0
+let delta=0
+
+let gameRunning=false
+
+const keys={}
+const mouse={x:0,y:0}
+
+window.addEventListener("keydown",e=>{
+keys[e.key.toLowerCase()]=true
+})
+
+window.addEventListener("keyup",e=>{
+keys[e.key.toLowerCase()]=false
+})
+
+window.addEventListener("mousemove",e=>{
+mouse.x=e.clientX
+mouse.y=e.clientY
+})
+
+class Vector2{
+
+constructor(x=0,y=0){
+this.x=x
+this.y=y
+}
+
+add(v){
+this.x+=v.x
+this.y+=v.y
+}
+
+multiply(s){
+this.x*=s
+this.y*=s
+}
+
+length(){
+return Math.sqrt(this.x*this.x+this.y*this.y)
+}
+
+normalize(){
+let l=this.length()
+if(l>0){
+this.x/=l
+this.y/=l
+}
+}
+
+}
+
+class Camera{
+
+constructor(){
+this.x=0
+this.y=0
+this.smooth=0.1
+}
+
+follow(target){
+
+this.x+=(target.x-this.x)*this.smooth
+this.y+=(target.y-this.y)*this.smooth
+
+}
+
+}
+
+const camera=new Camera()
+
+class GameObject{
+
+constructor(x,y){
+
+this.x=x
+this.y=y
+
+this.vx=0
+this.vy=0
+
+this.size=20
+
+this.dead=false
+
+}
+
+update(dt){}
+
+draw(ctx){
+
+ctx.fillStyle="white"
+ctx.beginPath()
+ctx.arc(this.x-camera.x+GAME_WIDTH/2,this.y-camera.y+GAME_HEIGHT/2,this.size,0,Math.PI*2)
+ctx.fill()
+
+}
+
+}
+
+class GameEngine{
+
+constructor(){
+
+this.objects=[]
+
+}
+
+add(obj){
+this.objects.push(obj)
+}
+
+update(dt){
+
+for(let i=this.objects.length-1;i>=0;i--){
+
+let obj=this.objects[i]
+
+if(obj.dead){
+this.objects.splice(i,1)
+continue
+}
+
+obj.update(dt)
+
+}
+
+}
+
+draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+for(let obj of this.objects){
+obj.draw(ctx)
+}
+
+}
+
+}
+
+const engine=new GameEngine()
+
+class Player extends GameObject{
+
+constructor(){
+
+super(0,0)
+
+this.speed=200
+this.size=12
+
+this.xp=0
+this.level=1
+this.coins=0
+
+this.health=100
+
+}
+
+update(dt){
+
+let dir=new Vector2(mouse.x-GAME_WIDTH/2,mouse.y-GAME_HEIGHT/2)
+
+dir.normalize()
+
+this.vx=dir.x*this.speed
+this.vy=dir.y*this.speed
+
+this.x+=this.vx*dt
+this.y+=this.vy*dt
+
+camera.follow(this)
+
+}
+
+draw(ctx){
+
+ctx.fillStyle="#00d0ff"
+
+ctx.beginPath()
+ctx.arc(this.x-camera.x+GAME_WIDTH/2,this.y-camera.y+GAME_HEIGHT/2,this.size,0,Math.PI*2)
+ctx.fill()
+
+}
+
+}
+
+let player=new Player()
+
+engine.add(player)
+
+function gameLoop(time){
+
+delta=(time-lastTime)/1000
+lastTime=time
+
+if(gameRunning){
+
+engine.update(delta)
+engine.draw()
+
+}
+
+requestAnimationFrame(gameLoop)
+
+}
+
+requestAnimationFrame(gameLoop)
+
+document.getElementById("startBtn").onclick=()=>{
+
+document.getElementById("menu").style.display="none"
+
+gameRunning=true
+
+}
+
+/* ===============================
+   FISH SPECIES DATABASE
+================================ */
+
+const FishSpecies = [
+
+{ name:"Plankton", size:3, speed:10, xp:1, predator:false, color:"#88ffee" },
+{ name:"Tiny Fry", size:5, speed:30, xp:2, predator:false, color:"#77ccff" },
+{ name:"Minnow", size:6, speed:40, xp:3, predator:false, color:"#55bbff" },
+{ name:"Blue Minnow", size:7, speed:42, xp:3, predator:false, color:"#3399ff" },
+{ name:"Silver Fish", size:8, speed:50, xp:4, predator:false, color:"#ccccff" },
+{ name:"Reef Fish", size:9, speed:45, xp:4, predator:false, color:"#ffaa55" },
+{ name:"Yellow Reef", size:10, speed:48, xp:5, predator:false, color:"#ffee55" },
+{ name:"Angel Fish", size:11, speed:50, xp:6, predator:false, color:"#ff77cc" },
+{ name:"Butterfly Fish", size:12, speed:52, xp:6, predator:false, color:"#ffcc00" },
+{ name:"Flying Fish", size:13, speed:60, xp:7, predator:false, color:"#77ffff" },
+
+{ name:"Hunter Fry", size:14, speed:70, xp:10, predator:true, color:"#ff8844" },
+{ name:"Needle Fish", size:15, speed:75, xp:12, predator:true, color:"#ffaa00" },
+{ name:"Trigger Fish", size:16, speed:65, xp:13, predator:true, color:"#ff6600" },
+{ name:"Piranha", size:17, speed:80, xp:15, predator:true, color:"#ff2222" },
+{ name:"Barracuda", size:22, speed:100, xp:20, predator:true, color:"#bbbbbb" },
+
+{ name:"Small Shark", size:30, speed:120, xp:30, predator:true, color:"#777777" },
+{ name:"Tiger Shark", size:35, speed:130, xp:40, predator:true, color:"#666666" },
+{ name:"Great Shark", size:45, speed:140, xp:60, predator:true, color:"#555555" },
+{ name:"Deep Hunter", size:55, speed:150, xp:80, predator:true, color:"#333333" },
+{ name:"Apex Predator", size:65, speed:160, xp:120, predator:true, color:"#111111" }
+
+]
+
+
+
+/* ===============================
+   FISH CLASS
+================================ */
+
+class Fish extends GameObject{
+
+constructor(x,y,species){
+
+super(x,y)
+
+this.species=species
+
+this.size=species.size
+this.speed=species.speed
+
+this.color=species.color
+
+this.xp=species.xp
+
+this.predator=species.predator
+
+this.target=null
+
+this.wanderAngle=Math.random()*Math.PI*2
+
+this.fleeTimer=0
+
+}
+
+
+
+update(dt){
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+
+
+/* FLEE BEHAVIOR */
+
+if(!this.predator && dist<200){
+
+this.fleeTimer=1
+
+}
+
+
+
+if(this.fleeTimer>0){
+
+this.fleeTimer-=dt
+
+let dirX=-dx/dist
+let dirY=-dy/dist
+
+this.vx=dirX*this.speed
+this.vy=dirY*this.speed
+
+}
+
+
+
+/* HUNT BEHAVIOR */
+
+else if(this.predator){
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<300){
+
+this.vx=(dx/dist)*this.speed
+this.vy=(dy/dist)*this.speed
+
+}
+
+else{
+
+this.wander(dt)
+
+}
+
+}
+
+
+
+/* NORMAL WANDER */
+
+else{
+
+this.wander(dt)
+
+}
+
+
+
+/* MOVEMENT */
+
+this.x+=this.vx*dt
+this.y+=this.vy*dt
+
+
+
+/* EAT CHECK */
+
+let eatDist=this.size+player.size
+
+if(dist<eatDist){
+
+if(player.size>this.size){
+
+this.dead=true
+
+player.xp+=this.xp
+player.coins+=1
+
+}
+
+else{
+
+player.health-=10
+
+}
+
+}
+
+}
+
+
+
+wander(dt){
+
+this.wanderAngle+= (Math.random()-0.5)*0.5
+
+this.vx=Math.cos(this.wanderAngle)*this.speed*0.4
+this.vy=Math.sin(this.wanderAngle)*this.speed*0.4
+
+}
+
+
+
+draw(ctx){
+
+ctx.fillStyle=this.color
+
+ctx.beginPath()
+
+ctx.arc(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2,
+this.size,
+0,
+Math.PI*2)
+
+ctx.fill()
+
+}
+
+}
+
+
+
+/* ===============================
+   FISH SCHOOL SYSTEM
+================================ */
+
+class FishSchool{
+
+constructor(x,y,species,count){
+
+this.fish=[]
+
+for(let i=0;i<count;i++){
+
+let fx=x+(Math.random()*100-50)
+let fy=y+(Math.random()*100-50)
+
+let f=new Fish(fx,fy,species)
+
+this.fish.push(f)
+
+engine.add(f)
+
+}
+
+}
+
+}
+
+
+
+/* ===============================
+   FISH SPAWNER
+================================ */
+
+class FishSpawner{
+
+constructor(){
+
+this.timer=0
+
+}
+
+
+
+update(dt){
+
+this.timer-=dt
+
+if(this.timer<=0){
+
+this.spawnSchool()
+
+this.timer=3+Math.random()*3
+
+}
+
+}
+
+
+
+spawnSchool(){
+
+let dist=800
+
+let angle=Math.random()*Math.PI*2
+
+let x=player.x+Math.cos(angle)*dist
+let y=player.y+Math.sin(angle)*dist
+
+let species=FishSpecies[Math.floor(Math.random()*FishSpecies.length)]
+
+let count=3+Math.floor(Math.random()*8)
+
+new FishSchool(x,y,species,count)
+
+}
+
+}
+
+
+
+const fishSpawner=new FishSpawner()
+
+engine.add({
+update(dt){
+fishSpawner.update(dt)
+},
+draw(){}
+})
+
+
+
+/* ===============================
+   XP SYSTEM
+================================ */
+
+function updateXP(){
+
+let levelXP=player.level*50
+
+if(player.xp>=levelXP){
+
+player.xp-=levelXP
+player.level++
+
+player.size+=2
+player.speed+=10
+
+}
+
+let percent=(player.xp/levelXP)*100
+
+document.getElementById("xpFill").style.width=percent+"%"
+
+}
+
+
+
+/* ===============================
+   HUD UPDATE
+================================ */
+
+setInterval(()=>{
+
+document.getElementById("coins").innerText="Coins: "+player.coins
+
+updateXP()
+
+},200)
+
+
+
+/* ===============================
+   INITIAL FISH SPAWN
+================================ */
+
+for(let i=0;i<30;i++){
+
+let x=Math.random()*2000-1000
+let y=Math.random()*2000-1000
+
+let species=FishSpecies[Math.floor(Math.random()*10)]
+
+engine.add(new Fish(x,y,species))
+
+} 
+/* =================================
+   BIOME DEFINITIONS
+================================= */
+
+const BIOMES = [
+
+{
+name:"Shallow Reef",
+color:"#1ecbe1",
+fog:0.05,
+spawn:["Plankton","Tiny Fry","Reef Fish"]
+},
+
+{
+name:"Coral Garden",
+color:"#ff9966",
+fog:0.06,
+spawn:["Angel Fish","Butterfly Fish"]
+},
+
+{
+name:"Open Ocean",
+color:"#0066cc",
+fog:0.02,
+spawn:["Minnow","Silver Fish","Flying Fish"]
+},
+
+{
+name:"Deep Sea",
+color:"#001133",
+fog:0.15,
+spawn:["Needle Fish","Trigger Fish"]
+},
+
+{
+name:"Abyss",
+color:"#000011",
+fog:0.25,
+spawn:["Deep Hunter"]
+},
+
+{
+name:"Sunken Graveyard",
+color:"#334455",
+fog:0.12,
+spawn:["Barracuda","Piranha"]
+},
+
+{
+name:"Jellyfish Forest",
+color:"#5500aa",
+fog:0.08,
+spawn:["Plankton","Angel Fish"]
+}
+
+]
+
+
+
+/* =================================
+   SIMPLE NOISE GENERATOR
+================================= */
+
+class Noise{
+
+static random2(x,y){
+
+let n=x*374761+y*668265
+
+n=(n^(n>>13))*1274126177
+
+return ((n^(n>>16))&0xffff)/65535
+
+}
+
+}
+
+
+
+/* =================================
+   WORLD CLASS
+================================= */
+
+class OceanWorld{
+
+constructor(){
+
+this.tileSize=400
+
+this.tiles={}
+
+}
+
+
+
+getTile(tx,ty){
+
+let key=tx+"_"+ty
+
+if(!this.tiles[key]){
+
+this.tiles[key]=this.generateTile(tx,ty)
+
+}
+
+return this.tiles[key]
+
+}
+
+
+
+generateTile(tx,ty){
+
+let n=Noise.random2(tx,ty)
+
+let biomeIndex=Math.floor(n*BIOMES.length)
+
+let biome=BIOMES[biomeIndex]
+
+return{
+
+tx,
+ty,
+biome
+
+}
+
+}
+
+
+
+draw(ctx){
+
+let startX=Math.floor((camera.x-GAME_WIDTH)/this.tileSize)
+let endX=Math.floor((camera.x+GAME_WIDTH)/this.tileSize)
+
+let startY=Math.floor((camera.y-GAME_HEIGHT)/this.tileSize)
+let endY=Math.floor((camera.y+GAME_HEIGHT)/this.tileSize)
+
+
+
+for(let x=startX;x<=endX;x++){
+
+for(let y=startY;y<=endY;y++){
+
+let tile=this.getTile(x,y)
+
+let px=x*this.tileSize
+let py=y*this.tileSize
+
+ctx.fillStyle=tile.biome.color
+
+ctx.fillRect(
+px-camera.x+GAME_WIDTH/2,
+py-camera.y+GAME_HEIGHT/2,
+this.tileSize,
+this.tileSize)
+
+}
+
+}
+
+}
+
+}
+
+
+
+const world=new OceanWorld()
+
+
+
+engine.draw=function(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+world.draw(ctx)
+
+for(let obj of this.objects){
+obj.draw(ctx)
+}
+
+}
+
+
+
+/* =================================
+   BUBBLE PARTICLES
+================================= */
+
+class Bubble extends GameObject{
+
+constructor(x,y){
+
+super(x,y)
+
+this.size=2+Math.random()*4
+this.vy=-20-Math.random()*30
+this.life=3
+
+}
+
+
+
+update(dt){
+
+this.life-=dt
+
+if(this.life<=0) this.dead=true
+
+this.y+=this.vy*dt
+
+}
+
+
+
+draw(ctx){
+
+ctx.fillStyle="rgba(200,230,255,0.6)"
+
+ctx.beginPath()
+
+ctx.arc(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2,
+this.size,
+0,
+Math.PI*2)
+
+ctx.fill()
+
+}
+
+}
+
+
+
+class BubbleSystem{
+
+constructor(){
+
+this.timer=0
+
+}
+
+
+
+update(dt){
+
+this.timer-=dt
+
+if(this.timer<0){
+
+this.spawn()
+
+this.timer=0.2
+
+}
+
+}
+
+
+
+spawn(){
+
+let x=player.x+(Math.random()*200-100)
+let y=player.y+(Math.random()*200-100)
+
+engine.add(new Bubble(x,y))
+
+}
+
+}
+
+
+
+const bubbleSystem=new BubbleSystem()
+
+engine.add({
+update(dt){bubbleSystem.update(dt)},
+draw(){}
+})
+
+
+
+/* =================================
+   JELLYFISH (BIOLUMINESCENT)
+================================= */
+
+class Jellyfish extends GameObject{
+
+constructor(x,y){
+
+super(x,y)
+
+this.size=15+Math.random()*10
+this.phase=Math.random()*10
+
+}
+
+
+
+update(dt){
+
+this.phase+=dt
+
+this.y+=Math.sin(this.phase)*20*dt
+
+}
+
+
+
+draw(ctx){
+
+let px=this.x-camera.x+GAME_WIDTH/2
+let py=this.y-camera.y+GAME_HEIGHT/2
+
+let glow=ctx.createRadialGradient(px,py,0,px,py,this.size*3)
+
+glow.addColorStop(0,"rgba(200,100,255,0.8)")
+glow.addColorStop(1,"rgba(200,100,255,0)")
+
+ctx.fillStyle=glow
+
+ctx.beginPath()
+ctx.arc(px,py,this.size*3,0,Math.PI*2)
+ctx.fill()
+
+ctx.fillStyle="#cc88ff"
+
+ctx.beginPath()
+ctx.arc(px,py,this.size,0,Math.PI*2)
+ctx.fill()
+
+}
+
+}
+
+
+
+/* =================================
+   SPAWN JELLYFISH
+================================= */
+
+for(let i=0;i<15;i++){
+
+let x=Math.random()*3000-1500
+let y=Math.random()*3000-1500
+
+engine.add(new Jellyfish(x,y))
+
+}
+
+
+
+/* =================================
+   WATER CURRENT SYSTEM
+================================= */
+
+class CurrentField{
+
+getForce(x,y){
+
+let n=Noise.random2(Math.floor(x/500),Math.floor(y/500))
+
+let angle=n*Math.PI*2
+
+return{
+
+x:Math.cos(angle)*10,
+y:Math.sin(angle)*10
+
+}
+
+}
+
+}
+
+
+
+const currentField=new CurrentField()
+
+
+
+engine.add({
+
+update(dt){
+
+let f=currentField.getForce(player.x,player.y)
+
+player.x+=f.x*dt
+player.y+=f.y*dt
+
+},
+
+draw(){}
+
+})
+
+
+
+/* =================================
+   DEPTH FOG
+================================= */
+
+function drawDepthFog(){
+
+let depth=Math.abs(player.y)/2000
+
+let alpha=Math.min(depth,0.6)
+
+ctx.fillStyle="rgba(0,0,0,"+alpha+")"
+
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+}
+
+
+
+const oldDraw=engine.draw
+
+engine.draw=function(){
+
+oldDraw.call(engine)
+
+drawDepthFog()
+
+} 
+/* ================================
+   DAMAGE SYSTEM
+================================ */
+
+function dealDamage(target,damage){
+
+target.health-=damage
+
+if(target.health<=0){
+
+target.dead=true
+
+}
+
+}
+
+
+
+/* ================================
+   BLOOD PARTICLES
+================================ */
+
+class BloodParticle extends GameObject{
+
+constructor(x,y){
+
+super(x,y)
+
+this.size=2+Math.random()*3
+
+this.vx=(Math.random()-0.5)*200
+this.vy=(Math.random()-0.5)*200
+
+this.life=1
+
+}
+
+update(dt){
+
+this.life-=dt
+
+if(this.life<=0) this.dead=true
+
+this.x+=this.vx*dt
+this.y+=this.vy*dt
+
+this.vx*=0.95
+this.vy*=0.95
+
+}
+
+draw(ctx){
+
+ctx.fillStyle="rgba(200,0,0,0.7)"
+
+ctx.beginPath()
+
+ctx.arc(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2,
+this.size,
+0,
+Math.PI*2)
+
+ctx.fill()
+
+}
+
+}
+
+
+
+function spawnBlood(x,y,count){
+
+for(let i=0;i<count;i++){
+
+engine.add(new BloodParticle(x,y))
+
+}
+
+}
+
+
+
+/* ================================
+   ENEMY BASE CLASS
+================================ */
+
+class Enemy extends GameObject{
+
+constructor(x,y){
+
+super(x,y)
+
+this.health=100
+this.damage=10
+
+this.speed=80
+
+this.target=null
+
+}
+
+
+
+update(dt){
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<500){
+
+this.vx=(dx/dist)*this.speed
+this.vy=(dy/dist)*this.speed
+
+}
+
+else{
+
+this.vx*=0.98
+this.vy*=0.98
+
+}
+
+
+
+this.x+=this.vx*dt
+this.y+=this.vy*dt
+
+
+
+/* ATTACK PLAYER */
+
+if(dist<this.size+player.size){
+
+dealDamage(player,this.damage)
+
+spawnBlood(player.x,player.y,8)
+
+}
+
+}
+
+}
+
+
+
+/* ================================
+   SHARK
+================================ */
+
+class Shark extends Enemy{
+
+constructor(x,y){
+
+super(x,y)
+
+this.size=40
+this.speed=120
+this.health=200
+this.damage=20
+
+}
+
+
+
+draw(ctx){
+
+ctx.fillStyle="#666"
+
+ctx.beginPath()
+
+ctx.arc(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2,
+this.size,
+0,
+Math.PI*2)
+
+ctx.fill()
+
+}
+
+}
+
+
+
+/* ================================
+   GIANT SQUID
+================================ */
+
+class GiantSquid extends Enemy{
+
+constructor(x,y){
+
+super(x,y)
+
+this.size=50
+this.speed=80
+this.health=300
+this.damage=25
+
+this.phase=0
+
+}
+
+
+
+update(dt){
+
+super.update(dt)
+
+this.phase+=dt
+
+this.y+=Math.sin(this.phase)*20*dt
+
+}
+
+
+
+draw(ctx){
+
+let px=this.x-camera.x+GAME_WIDTH/2
+let py=this.y-camera.y+GAME_HEIGHT/2
+
+ctx.fillStyle="#aa44ff"
+
+ctx.beginPath()
+ctx.arc(px,py,this.size,0,Math.PI*2)
+ctx.fill()
+
+for(let i=0;i<6;i++){
+
+let angle=i*Math.PI/3+this.phase
+
+ctx.beginPath()
+
+ctx.moveTo(px,py)
+
+ctx.lineTo(
+px+Math.cos(angle)*this.size*2,
+py+Math.sin(angle)*this.size*2)
+
+ctx.strokeStyle="#aa44ff"
+ctx.stroke()
+
+}
+
+}
+
+}
+
+
+
+/* ================================
+   KILLER WHALE
+================================ */
+
+class KillerWhale extends Enemy{
+
+constructor(x,y){
+
+super(x,y)
+
+this.size=70
+this.speed=140
+this.health=500
+this.damage=35
+
+}
+
+
+
+draw(ctx){
+
+ctx.fillStyle="#000"
+
+ctx.beginPath()
+
+ctx.arc(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2,
+this.size,
+0,
+Math.PI*2)
+
+ctx.fill()
+
+ctx.fillStyle="#fff"
+
+ctx.beginPath()
+
+ctx.arc(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2,
+this.size*0.4,
+0,
+Math.PI*2)
+
+ctx.fill()
+
+}
+
+}
+
+
+
+/* ================================
+   ENEMY SPAWNER
+================================ */
+
+class EnemySpawner{
+
+constructor(){
+
+this.timer=0
+
+}
+
+
+
+update(dt){
+
+this.timer-=dt
+
+if(this.timer<=0){
+
+this.spawn()
+
+this.timer=10+Math.random()*10
+
+}
+
+}
+
+
+
+spawn(){
+
+let angle=Math.random()*Math.PI*2
+
+let dist=1200
+
+let x=player.x+Math.cos(angle)*dist
+let y=player.y+Math.sin(angle)*dist
+
+let r=Math.random()
+
+if(r<0.5){
+
+engine.add(new Shark(x,y))
+
+}
+else if(r<0.8){
+
+engine.add(new GiantSquid(x,y))
+
+}
+else{
+
+engine.add(new KillerWhale(x,y))
+
+}
+
+}
+
+}
+
+
+
+const enemySpawner=new EnemySpawner()
+
+engine.add({
+update(dt){enemySpawner.update(dt)},
+draw(){}
+})
+
+
+
+/* ================================
+   PLAYER ATTACK
+================================ */
+
+window.addEventListener("keydown",e=>{
+
+if(e.code==="Space"){
+
+playerAttack()
+
+}
+
+})
+
+
+
+function playerAttack(){
+
+let range=player.size+40
+
+for(let obj of engine.objects){
+
+if(obj instanceof Enemy){
+
+let dx=obj.x-player.x
+let dy=obj.y-player.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<range){
+
+dealDamage(obj,50)
+
+spawnBlood(obj.x,obj.y,15)
+
+}
+
+}
+
+}
+
+}
+
+
+
+/* ================================
+   PLAYER HEALTH BAR
+================================ */
+
+const healthBar=document.createElement("div")
+
+healthBar.style.position="absolute"
+healthBar.style.left="20px"
+healthBar.style.top="20px"
+healthBar.style.width="200px"
+healthBar.style.height="20px"
+healthBar.style.background="#300"
+
+document.body.appendChild(healthBar)
+
+const healthFill=document.createElement("div")
+
+healthFill.style.height="100%"
+healthFill.style.width="100%"
+healthFill.style.background="#f00"
+
+healthBar.appendChild(healthFill)
+
+
+
+setInterval(()=>{
+
+let percent=player.health/100
+
+if(percent<0) percent=0
+
+healthFill.style.width=(percent*100)+"%"
+
+},100) 
+
+/* =================================
+   BOSS SYSTEM
+================================= */
+
+class Boss extends Enemy{
+
+constructor(x,y){
+
+super(x,y)
+
+this.phase=0
+
+this.attackTimer=3
+
+}
+
+}
+
+
+
+/* =================================
+   KRAKEN TENTACLE
+================================= */
+
+class KrakenTentacle extends GameObject{
+
+constructor(boss,angle){
+
+super(boss.x,boss.y)
+
+this.boss=boss
+this.angle=angle
+this.length=120
+
+}
+
+update(dt){
+
+this.x=this.boss.x+Math.cos(this.angle)*this.length
+this.y=this.boss.y+Math.sin(this.angle)*this.length
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<player.size+20){
+
+dealDamage(player,15)
+
+spawnBlood(player.x,player.y,6)
+
+}
+
+}
+
+draw(ctx){
+
+ctx.strokeStyle="#6600aa"
+
+ctx.lineWidth=10
+
+ctx.beginPath()
+
+ctx.moveTo(
+this.boss.x-camera.x+GAME_WIDTH/2,
+this.boss.y-camera.y+GAME_HEIGHT/2)
+
+ctx.lineTo(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2)
+
+ctx.stroke()
+
+}
+
+}
+
+
+
+/* =================================
+   ANCIENT KRAKEN
+================================= */
+
+class AncientKraken extends Boss{
+
+constructor(x,y){
+
+super(x,y)
+
+this.size=120
+this.speed=40
+this.health=2000
+this.damage=40
+
+this.tentacles=[]
+
+for(let i=0;i<8;i++){
+
+let angle=i*Math.PI/4
+
+let t=new KrakenTentacle(this,angle)
+
+this.tentacles.push(t)
+
+engine.add(t)
+
+}
+
+}
+
+
+
+update(dt){
+
+super.update(dt)
+
+this.attackTimer-=dt
+
+if(this.attackTimer<=0){
+
+this.attack()
+
+this.attackTimer=5
+
+}
+
+}
+
+
+
+attack(){
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<400){
+
+spawnShockwave(this.x,this.y)
+
+}
+
+}
+
+
+
+draw(ctx){
+
+let px=this.x-camera.x+GAME_WIDTH/2
+let py=this.y-camera.y+GAME_HEIGHT/2
+
+
+
+/* body */
+
+ctx.fillStyle="#440088"
+
+ctx.beginPath()
+
+ctx.arc(px,py,this.size,0,Math.PI*2)
+
+ctx.fill()
+
+
+
+/* eye */
+
+ctx.fillStyle="#fff"
+
+ctx.beginPath()
+
+ctx.arc(px,py,20,0,Math.PI*2)
+
+ctx.fill()
+
+ctx.fillStyle="#000"
+
+ctx.beginPath()
+
+ctx.arc(px,py,10,0,Math.PI*2)
+
+ctx.fill()
+
+}
+
+}
+
+
+
+/* =================================
+   SHOCKWAVE ATTACK
+================================= */
+
+class Shockwave extends GameObject{
+
+constructor(x,y){
+
+super(x,y)
+
+this.radius=0
+this.max=400
+
+}
+
+update(dt){
+
+this.radius+=200*dt
+
+if(this.radius>this.max) this.dead=true
+
+
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<this.radius+player.size && dist>this.radius-20){
+
+dealDamage(player,30)
+
+spawnBlood(player.x,player.y,10)
+
+}
+
+}
+
+
+
+draw(ctx){
+
+ctx.strokeStyle="rgba(200,0,255,0.6)"
+
+ctx.lineWidth=6
+
+ctx.beginPath()
+
+ctx.arc(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2,
+this.radius,
+0,
+Math.PI*2)
+
+ctx.stroke()
+
+}
+
+}
+
+
+
+function spawnShockwave(x,y){
+
+engine.add(new Shockwave(x,y))
+
+}
+
+
+
+/* =================================
+   BOSS SPAWNER
+================================= */
+
+class BossSpawner{
+
+constructor(){
+
+this.spawned=false
+
+}
+
+
+
+update(){
+
+if(player.level>=10 && !this.spawned){
+
+this.spawn()
+
+this.spawned=true
+
+}
+
+}
+
+
+
+spawn(){
+
+let x=player.x+800
+let y=player.y+200
+
+engine.add(new AncientKraken(x,y))
+
+showBossWarning()
+
+}
+
+}
+
+
+
+const bossSpawner=new BossSpawner()
+
+engine.add({
+update(){bossSpawner.update()},
+draw(){}
+})
+
+
+
+/* =================================
+   BOSS WARNING
+================================= */
+
+function showBossWarning(){
+
+let warning=document.createElement("div")
+
+warning.innerText="⚠ ANCIENT KRAKEN AWAKENS ⚠"
+
+warning.style.position="absolute"
+warning.style.top="40%"
+warning.style.left="50%"
+warning.style.transform="translate(-50%,-50%)"
+
+warning.style.fontSize="40px"
+warning.style.color="#ff00ff"
+
+document.body.appendChild(warning)
+
+setTimeout(()=>{
+
+warning.remove()
+
+},4000)
+
+}
+
+
+
+/* =================================
+   BOSS REWARD
+================================= */
+
+function checkBossDeath(){
+
+for(let obj of engine.objects){
+
+if(obj instanceof AncientKraken && obj.dead){
+
+player.coins+=500
+player.xp+=500
+
+showVictory()
+
+}
+
+}
+
+}
+
+
+
+setInterval(checkBossDeath,500)
+
+
+
+/* =================================
+   VICTORY SCREEN
+================================= */
+
+function showVictory(){
+
+let v=document.createElement("div")
+
+v.innerText="🏆 KRAKEN DEFEATED!"
+
+v.style.position="absolute"
+v.style.top="40%"
+v.style.left="50%"
+v.style.transform="translate(-50%,-50%)"
+
+v.style.fontSize="50px"
+v.style.color="#00ffcc"
+
+document.body.appendChild(v)
+
+} 
+/* =================================
+   ABILITY SYSTEM
+================================= */
+
+class Ability{
+
+constructor(name,key,cooldown,action){
+
+this.name=name
+this.key=key
+this.cooldown=cooldown
+this.timer=0
+this.action=action
+
+}
+
+
+
+update(dt){
+
+if(this.timer>0){
+
+this.timer-=dt
+
+}
+
+}
+
+
+
+use(){
+
+if(this.timer<=0){
+
+this.action()
+
+this.timer=this.cooldown
+
+}
+
+}
+
+}
+
+
+
+const abilities=[]
+
+
+
+function registerAbility(a){
+
+abilities.push(a)
+
+}
+
+
+
+/* =================================
+   DASH
+================================= */
+
+registerAbility(new Ability(
+
+"Dash",
+"ShiftLeft",
+3,
+
+function(){
+
+let speed=500
+
+player.vx+=Math.cos(player.angle)*speed
+player.vy+=Math.sin(player.angle)*speed
+
+spawnDashParticles()
+
+}
+
+))
+
+
+
+/* =================================
+   BITE ATTACK
+================================= */
+
+registerAbility(new Ability(
+
+"Bite",
+"KeyF",
+1.5,
+
+function(){
+
+let range=player.size+60
+
+for(let obj of engine.objects){
+
+if(obj instanceof Enemy){
+
+let dx=obj.x-player.x
+let dy=obj.y-player.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<range){
+
+dealDamage(obj,80)
+
+spawnBlood(obj.x,obj.y,20)
+
+}
+
+}
+
+}
+
+}
+
+))
+
+
+
+/* =================================
+   SHOCKWAVE
+================================= */
+
+registerAbility(new Ability(
+
+"Shockwave",
+"KeyQ",
+8,
+
+function(){
+
+spawnShockwave(player.x,player.y)
+
+}
+
+))
+
+
+
+/* =================================
+   BLOOD FRENZY
+================================= */
+
+let frenzyTimer=0
+
+registerAbility(new Ability(
+
+"BloodFrenzy",
+"KeyE",
+15,
+
+function(){
+
+frenzyTimer=6
+
+}
+
+))
+
+
+
+/* =================================
+   LEVIATHAN ROAR
+================================= */
+
+registerAbility(new Ability(
+
+"LeviathanRoar",
+"KeyR",
+20,
+
+function(){
+
+for(let obj of engine.objects){
+
+if(obj instanceof Enemy){
+
+let dx=obj.x-player.x
+let dy=obj.y-player.y
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<600){
+
+obj.vx+=dx*2
+obj.vy+=dy*2
+
+}
+
+}
+
+}
+
+spawnRoarEffect()
+
+}
+
+))
+
+
+
+/* =================================
+   INPUT FOR ABILITIES
+================================= */
+
+window.addEventListener("keydown",e=>{
+
+for(let a of abilities){
+
+if(e.code===a.key){
+
+a.use()
+
+}
+
+}
+
+})
+
+
+
+engine.add({
+
+update(dt){
+
+for(let a of abilities){
+
+a.update(dt)
+
+}
+
+
+
+if(frenzyTimer>0){
+
+frenzyTimer-=dt
+
+player.speed=250
+
+}else{
+
+player.speed=160
+
+}
+
+},
+
+draw(){}
+
+})
+
+
+
+/* =================================
+   DASH PARTICLES
+================================= */
+
+function spawnDashParticles(){
+
+for(let i=0;i<20;i++){
+
+engine.add(new Bubble(
+
+player.x+(Math.random()*40-20),
+player.y+(Math.random()*40-20)
+
+))
+
+}
+
+}
+
+
+
+/* =================================
+   ROAR EFFECT
+================================= */
+
+class RoarWave extends GameObject{
+
+constructor(x,y){
+
+super(x,y)
+
+this.radius=0
+
+}
+
+update(dt){
+
+this.radius+=300*dt
+
+if(this.radius>700) this.dead=true
+
+}
+
+draw(ctx){
+
+ctx.strokeStyle="rgba(255,255,255,0.6)"
+
+ctx.lineWidth=4
+
+ctx.beginPath()
+
+ctx.arc(
+this.x-camera.x+GAME_WIDTH/2,
+this.y-camera.y+GAME_HEIGHT/2,
+this.radius,
+0,
+Math.PI*2)
+
+ctx.stroke()
+
+}
+
+}
+
+
+
+function spawnRoarEffect(){
+
+engine.add(new RoarWave(player.x,player.y))
+
+}
+
+
+
+/* =================================
+   ABILITY UI
+================================= */
+
+const abilityBar=document.createElement("div")
+
+abilityBar.style.position="absolute"
+abilityBar.style.bottom="20px"
+abilityBar.style.left="50%"
+abilityBar.style.transform="translateX(-50%)"
+
+abilityBar.style.display="flex"
+abilityBar.style.gap="10px"
+
+document.body.appendChild(abilityBar)
+
+
+
+const abilityIcons=[]
+
+
+
+for(let a of abilities){
+
+let icon=document.createElement("div")
+
+icon.style.width="60px"
+icon.style.height="60px"
+icon.style.background="#222"
+icon.style.border="2px solid #555"
+
+icon.style.display="flex"
+icon.style.alignItems="center"
+icon.style.justifyContent="center"
+
+icon.style.color="#fff"
+icon.innerText=a.key.replace("Key","")
+
+abilityBar.appendChild(icon)
+
+abilityIcons.push(icon)
+
+}
+
+
+
+/* =================================
+   COOLDOWN UI
+================================= */
+
+setInterval(()=>{
+
+for(let i=0;i<abilities.length;i++){
+
+let a=abilities[i]
+
+let icon=abilityIcons[i]
+
+if(a.timer>0){
+
+icon.style.opacity="0.3"
+
+}else{
+
+icon.style.opacity="1"
+
+}
+
+}
+
+},100) 
+/* =================================
+   EVOLUTION STAGES
+================================= */
+
+const evolutions=[
+
+{
+name:"Tiny Fish",
+level:1,
+size:10,
+speed:160,
+vision:400
+},
+
+{
+name:"Small Fish",
+level:3,
+size:16,
+speed:180,
+vision:450
+},
+
+{
+name:"Hunter Fish",
+level:5,
+size:24,
+speed:200,
+vision:500
+},
+
+{
+name:"Barracuda",
+level:7,
+size:32,
+speed:220,
+vision:550
+},
+
+{
+name:"Shark",
+level:10,
+size:45,
+speed:240,
+vision:650
+},
+
+{
+name:"Mega Shark",
+level:15,
+size:60,
+speed:260,
+vision:750
+},
+
+{
+name:"Ancient Leviathan",
+level:20,
+size:90,
+speed:300,
+vision:900
+}
+
+]
+
+
+
+/* =================================
+   PLAYER PROGRESSION
+================================= */
+
+player.level=1
+player.xp=0
+player.coins=0
+
+player.nextXP=100
+
+
+
+function addXP(amount){
+
+player.xp+=amount
+
+if(player.xp>=player.nextXP){
+
+levelUp()
+
+}
+
+}
+
+
+
+function levelUp(){
+
+player.level++
+
+player.xp=0
+
+player.nextXP=Math.floor(player.nextXP*1.4)
+
+checkEvolution()
+
+showLevelUp()
+
+}
+
+
+
+/* =================================
+   EVOLUTION CHECK
+================================= */
+
+function checkEvolution(){
+
+for(let evo of evolutions){
+
+if(player.level===evo.level){
+
+applyEvolution(evo)
+
+}
+
+}
+
+}
+
+
+
+function applyEvolution(evo){
+
+player.size=evo.size
+
+player.speed=evo.speed
+
+player.vision=evo.vision
+
+showEvolution(evo.name)
+
+}
+
+
+
+/* =================================
+   EVOLUTION MESSAGE
+================================= */
+
+function showEvolution(name){
+
+let e=document.createElement("div")
+
+e.innerText="EVOLUTION: "+name
+
+e.style.position="absolute"
+e.style.top="35%"
+e.style.left="50%"
+e.style.transform="translate(-50%,-50%)"
+
+e.style.fontSize="40px"
+e.style.color="#00ffaa"
+
+document.body.appendChild(e)
+
+setTimeout(()=>{
+
+e.remove()
+
+},4000)
+
+}
+
+
+
+/* =================================
+   LEVEL UP MESSAGE
+================================= */
+
+function showLevelUp(){
+
+let l=document.createElement("div")
+
+l.innerText="LEVEL UP!"
+
+l.style.position="absolute"
+l.style.top="25%"
+l.style.left="50%"
+l.style.transform="translate(-50%,-50%)"
+
+l.style.fontSize="32px"
+l.style.color="#ffff00"
+
+document.body.appendChild(l)
+
+setTimeout(()=>{
+
+l.remove()
+
+},2000)
+
+}
+
+
+
+/* =================================
+   COINS
+================================= */
+
+function addCoins(amount){
+
+player.coins+=amount
+
+}
+
+
+
+/* =================================
+   XP FROM KILLS
+================================= */
+
+setInterval(()=>{
+
+for(let obj of engine.objects){
+
+if(obj instanceof Enemy && obj.dead){
+
+addXP(40)
+
+addCoins(10)
+
+obj.rewarded=true
+
+}
+
+}
+
+},200)
+
+
+
+/* =================================
+   XP BAR UI
+================================= */
+
+const xpBar=document.createElement("div")
+
+xpBar.style.position="absolute"
+xpBar.style.bottom="80px"
+xpBar.style.left="50%"
+xpBar.style.transform="translateX(-50%)"
+
+xpBar.style.width="300px"
+xpBar.style.height="16px"
+
+xpBar.style.background="#003"
+
+document.body.appendChild(xpBar)
+
+
+
+const xpFill=document.createElement("div")
+
+xpFill.style.height="100%"
+xpFill.style.width="0%"
+xpFill.style.background="#00ccff"
+
+xpBar.appendChild(xpFill)
+
+
+
+setInterval(()=>{
+
+let percent=player.xp/player.nextXP
+
+xpFill.style.width=(percent*100)+"%"
+
+},100)
+
+
+
+/* =================================
+   COINS UI
+================================= */
+
+const coinUI=document.createElement("div")
+
+coinUI.style.position="absolute"
+coinUI.style.top="20px"
+coinUI.style.right="20px"
+
+coinUI.style.color="#ffcc00"
+coinUI.style.fontSize="22px"
+
+document.body.appendChild(coinUI)
+
+
+
+setInterval(()=>{
+
+coinUI.innerText="Coins: "+player.coins
+
+},200)
+
+
+
+/* =================================
+   LEVEL UI
+================================= */
+
+const levelUI=document.createElement("div")
+
+levelUI.style.position="absolute"
+levelUI.style.top="50px"
+levelUI.style.right="20px"
+
+levelUI.style.color="#00ffaa"
+levelUI.style.fontSize="22px"
+
+document.body.appendChild(levelUI)
+
+
+
+setInterval(()=>{
+
+levelUI.innerText="Level: "+player.level
+
+},200) 
+/* =========================
+   PART 8 — PROGRESSION SYSTEM
+========================= */
+
+const Progression = {
+
+    xp: 0,
+    level: 1,
+    xpToNext: 100,
+
+    addXP(amount){
+        this.xp += amount
+
+        while(this.xp >= this.xpToNext){
+            this.xp -= this.xpToNext
+            this.levelUp()
+        }
+    },
+
+    levelUp(){
+        this.level++
+
+        this.xpToNext = Math.floor(this.xpToNext * 1.35)
+
+        UI.showLevelUp(this.level)
+
+        Player.maxHealth += 10
+        Player.health = Player.maxHealth
+
+        Economy.coins += 50
+    }
+
+}
+
+
+/* =========================
+   PART 8 — ACHIEVEMENTS
+========================= */
+
+const Achievements = {
+
+    list: [
+
+        {
+            id: "firstFish",
+            name: "First Catch",
+            description: "Eat your first fish",
+            unlocked: false
+        },
+
+        {
+            id: "bigHunter",
+            name: "Hunter",
+            description: "Eat 50 fish",
+            unlocked: false
+        },
+
+        {
+            id: "deepExplorer",
+            name: "Deep Explorer",
+            description: "Reach deep ocean zone",
+            unlocked: false
+        },
+
+        {
+            id: "coinMaster",
+            name: "Treasure Hunter",
+            description: "Collect 1000 coins",
+            unlocked: false
+        }
+
+    ],
+
+    unlock(id){
+
+        const a = this.list.find(x => x.id === id)
+
+        if(!a || a.unlocked) return
+
+        a.unlocked = true
+
+        UI.showAchievement(a.name)
+
+        Economy.coins += 100
+
+    }
+
+}
+
+
+/* =========================
+   PART 8 — SAVE SYSTEM
+========================= */
+
+const SaveSystem = {
+
+    save(){
+
+        const data = {
+
+            coins: Economy.coins,
+            upgrades: Economy.upgrades,
+
+            level: Progression.level,
+            xp: Progression.xp,
+            xpToNext: Progression.xpToNext,
+
+            achievements: Achievements.list
+
+        }
+
+        localStorage.setItem("oceanGameSave", JSON.stringify(data))
+
+    },
+
+    load(){
+
+        const raw = localStorage.getItem("oceanGameSave")
+
+        if(!raw) return
+
+        const data = JSON.parse(raw)
+
+        Economy.coins = data.coins || 0
+        Economy.upgrades = data.upgrades || {}
+
+        Progression.level = data.level || 1
+        Progression.xp = data.xp || 0
+        Progression.xpToNext = data.xpToNext || 100
+
+        if(data.achievements){
+
+            data.achievements.forEach(saved => {
+
+                const a = Achievements.list.find(x => x.id === saved.id)
+
+                if(a){
+                    a.unlocked = saved.unlocked
+                }
+
+            })
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   PART 8 — AUTO SAVE
+========================= */
+
+setInterval(()=>{
+
+    SaveSystem.save()
+
+}, 10000)
+
+
+
+/* =========================
+   PART 8 — GAME STATS
+========================= */
+
+const Stats = {
+
+    fishEaten: 0,
+    distance: 0,
+    coinsCollected: 0,
+
+    addFish(){
+
+        this.fishEaten++
+
+        if(this.fishEaten === 1){
+            Achievements.unlock("firstFish")
+        }
+
+        if(this.fishEaten === 50){
+            Achievements.unlock("bigHunter")
+        }
+
+    },
+
+    addCoins(amount){
+
+        this.coinsCollected += amount
+
+        if(this.coinsCollected >= 1000){
+            Achievements.unlock("coinMaster")
+        }
+
+    }
+
+} 
+/* =========================
+   PART 9 — PREDATOR AI
+========================= */
+
+class Predator {
+
+    constructor(x, y){
+
+        this.x = x
+        this.y = y
+
+        this.width = 120
+        this.height = 60
+
+        this.speed = 2 + Math.random() * 2
+
+        this.direction = -1
+
+        this.target = null
+
+        this.health = 50
+
+    }
+
+    update(){
+
+        this.findTarget()
+
+        if(this.target){
+
+            const dx = this.target.x - this.x
+            const dy = this.target.y - this.y
+
+            const dist = Math.sqrt(dx*dx + dy*dy)
+
+            if(dist < 400){
+
+                this.x += dx * 0.02
+                this.y += dy * 0.02
+
+            }
+
+        }else{
+
+            this.x += this.speed * this.direction
+
+        }
+
+        this.checkBounds()
+
+    }
+
+    findTarget(){
+
+        const dx = Player.x - this.x
+        const dy = Player.y - this.y
+
+        const dist = Math.sqrt(dx*dx + dy*dy)
+
+        if(dist < 500){
+
+            this.target = Player
+
+        }else{
+
+            this.target = null
+
+        }
+
+    }
+
+    checkBounds(){
+
+        if(this.x < -200){
+            this.x = Game.width + 200
+        }
+
+        if(this.x > Game.width + 200){
+            this.x = -200
+        }
+
+    }
+
+    draw(ctx){
+
+        ctx.fillStyle = "#aa2222"
+
+        ctx.fillRect(this.x, this.y, this.width, this.height)
+
+    }
+
+}
+
+
+/* =========================
+   PART 9 — SHARK CLASS
+========================= */
+
+class Shark extends Predator{
+
+    constructor(x,y){
+
+        super(x,y)
+
+        this.speed = 3 + Math.random()*2
+        this.damage = 20
+
+    }
+
+    attack(){
+
+        const dx = Player.x - this.x
+        const dy = Player.y - this.y
+
+        const dist = Math.sqrt(dx*dx + dy*dy)
+
+        if(dist < 80){
+
+            Player.health -= this.damage
+
+            Effects.screenShake()
+
+        }
+
+    }
+
+    update(){
+
+        super.update()
+
+        this.attack()
+
+    }
+
+}
+
+
+/* =========================
+   PART 9 — OCEAN CURRENTS
+========================= */
+
+const OceanCurrents = {
+
+    currents: [],
+
+    spawn(){
+
+        if(Math.random() < 0.01){
+
+            this.currents.push({
+
+                x: Math.random() * Game.width,
+                y: Math.random() * Game.height,
+
+                forceX: (Math.random()-0.5) * 0.5,
+                forceY: (Math.random()-0.5) * 0.5,
+
+                radius: 200
+
+            })
+
+        }
+
+    },
+
+    update(){
+
+        this.currents.forEach(c=>{
+
+            const dx = Player.x - c.x
+            const dy = Player.y - c.y
+
+            const dist = Math.sqrt(dx*dx + dy*dy)
+
+            if(dist < c.radius){
+
+                Player.x += c.forceX
+                Player.y += c.forceY
+
+            }
+
+        })
+
+    },
+
+    draw(ctx){
+
+        ctx.strokeStyle = "rgba(100,200,255,0.2)"
+
+        this.currents.forEach(c=>{
+
+            ctx.beginPath()
+            ctx.arc(c.x, c.y, c.radius, 0, Math.PI*2)
+            ctx.stroke()
+
+        })
+
+    }
+
+}
+
+
+/* =========================
+   PART 9 — OCEAN ZONES
+========================= */
+
+const OceanZones = {
+
+    zones: [
+
+        {
+            name: "Surface",
+            depth: 0,
+            color: "#3aa7ff",
+            spawnRate: 1
+        },
+
+        {
+            name: "Mid Ocean",
+            depth: 500,
+            color: "#1d5fa8",
+            spawnRate: 1.5
+        },
+
+        {
+            name: "Deep Ocean",
+            depth: 1000,
+            color: "#0d2a52",
+            spawnRate: 2
+        },
+
+        {
+            name: "Abyss",
+            depth: 2000,
+            color: "#050f1f",
+            spawnRate: 3
+        }
+
+    ],
+
+    getCurrentZone(){
+
+        for(let i = this.zones.length-1; i>=0; i--){
+
+            if(Player.depth >= this.zones[i].depth){
+                return this.zones[i]
+            }
+
+        }
+
+        return this.zones[0]
+
+    }
+
+}
+
+
+/* =========================
+   PART 9 — ENEMY SPAWNER
+========================= */
+
+const EnemySpawner = {
+
+    predators: [],
+
+    spawnTimer: 0,
+
+    update(){
+
+        this.spawnTimer++
+
+        const zone = OceanZones.getCurrentZone()
+
+        if(this.spawnTimer > 200 / zone.spawnRate){
+
+            this.spawnTimer = 0
+
+            const x = Math.random() * Game.width
+            const y = Math.random() * Game.height
+
+            const shark = new Shark(x,y)
+
+            this.predators.push(shark)
+
+        }
+
+        this.predators.forEach(p => p.update())
+
+    },
+
+    draw(ctx){
+
+        this.predators.forEach(p => p.draw(ctx))
+
+    }
+
+} 
+/* =========================
+   PART 10 — PARTICLE ENGINE
+========================= */
+
+const Particles = {
+
+    list: [],
+
+    spawn(x, y, vx, vy, life, size, color){
+
+        this.list.push({
+            x: x,
+            y: y,
+            vx: vx,
+            vy: vy,
+            life: life,
+            maxLife: life,
+            size: size,
+            color: color
+        })
+
+    },
+
+    update(){
+
+        for(let i = this.list.length - 1; i >= 0; i--){
+
+            const p = this.list[i]
+
+            p.x += p.vx
+            p.y += p.vy
+
+            p.life--
+
+            p.vx *= 0.98
+            p.vy *= 0.98
+
+            if(p.life <= 0){
+                this.list.splice(i,1)
+            }
+
+        }
+
+    },
+
+    draw(ctx){
+
+        this.list.forEach(p=>{
+
+            const alpha = p.life / p.maxLife
+
+            ctx.globalAlpha = alpha
+            ctx.fillStyle = p.color
+
+            ctx.beginPath()
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2)
+            ctx.fill()
+
+            ctx.globalAlpha = 1
+
+        })
+
+    }
+
+}
+
+
+/* =========================
+   PART 10 — BUBBLE SYSTEM
+========================= */
+
+const Bubbles = {
+
+    bubbles: [],
+
+    spawn(x,y){
+
+        this.bubbles.push({
+
+            x:x,
+            y:y,
+            vy: -1 - Math.random()*1.5,
+            size: 2 + Math.random()*4,
+            life: 200
+
+        })
+
+    },
+
+    update(){
+
+        for(let i = this.bubbles.length-1;i>=0;i--){
+
+            const b = this.bubbles[i]
+
+            b.y += b.vy
+            b.life--
+
+            if(b.life <=0){
+                this.bubbles.splice(i,1)
+            }
+
+        }
+
+    },
+
+    draw(ctx){
+
+        ctx.strokeStyle = "rgba(200,230,255,0.7)"
+
+        this.bubbles.forEach(b=>{
+
+            ctx.beginPath()
+            ctx.arc(b.x, b.y, b.size, 0, Math.PI*2)
+            ctx.stroke()
+
+        })
+
+    }
+
+}
+
+
+/* =========================
+   PART 10 — BLOOD EFFECT
+========================= */
+
+const BloodEffect = {
+
+    spawn(x,y){
+
+        for(let i=0;i<12;i++){
+
+            const angle = Math.random()*Math.PI*2
+
+            const speed = Math.random()*3
+
+            const vx = Math.cos(angle)*speed
+            const vy = Math.sin(angle)*speed
+
+            Particles.spawn(
+                x,
+                y,
+                vx,
+                vy,
+                60,
+                3,
+                "#aa0000"
+            )
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   PART 10 — BIOLUMINESCENT
+========================= */
+
+const GlowFish = {
+
+    list: [],
+
+    spawn(){
+
+        if(Math.random() < 0.01){
+
+            this.list.push({
+
+                x: Math.random()*Game.width,
+                y: Math.random()*Game.height,
+
+                size: 6 + Math.random()*6,
+                glow: 0
+
+            })
+
+        }
+
+    },
+
+    update(){
+
+        this.list.forEach(g=>{
+
+            g.glow += 0.05
+
+        })
+
+    },
+
+    draw(ctx){
+
+        this.list.forEach(g=>{
+
+            const glow = (Math.sin(g.glow)+1)/2
+
+            ctx.beginPath()
+
+            ctx.fillStyle = `rgba(120,255,200,${0.3+glow*0.5})`
+
+            ctx.arc(g.x, g.y, g.size + glow*5, 0, Math.PI*2)
+
+            ctx.fill()
+
+        })
+
+    }
+
+}
+
+
+/* =========================
+   PART 10 — SCREEN SHAKE
+========================= */
+
+const Effects = {
+
+    shake:0,
+
+    screenShake(){
+
+        this.shake = 10
+
+    },
+
+    apply(ctx){
+
+        if(this.shake > 0){
+
+            const dx = (Math.random()-0.5)*this.shake
+            const dy = (Math.random()-0.5)*this.shake
+
+            ctx.translate(dx,dy)
+
+            this.shake *= 0.9
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   PART 10 — WATER PARTICLES
+========================= */
+
+const WaterParticles = {
+
+    spawn(){
+
+        if(Math.random() < 0.2){
+
+            const x = Math.random()*Game.width
+            const y = Math.random()*Game.height
+
+            Particles.spawn(
+                x,
+                y,
+                0,
+                -0.2,
+                120,
+                1,
+                "rgba(200,220,255,0.4)"
+            )
+
+        }
+
+    }
+
+} 
+/* =========================
+   PART 11 — BOSS SYSTEM
+========================= */
+
+const BossSystem = {
+
+    bosses: [],
+
+    spawnKraken(){
+
+        const kraken = new Kraken(
+            Player.x + 600,
+            Player.y
+        )
+
+        this.bosses.push(kraken)
+
+    },
+
+    spawnWhale(){
+
+        const whale = new KillerWhale(
+            Player.x + 800,
+            Player.y
+        )
+
+        this.bosses.push(whale)
+
+    },
+
+    update(){
+
+        this.bosses.forEach(b=>b.update())
+
+    },
+
+    draw(ctx){
+
+        this.bosses.forEach(b=>b.draw(ctx))
+
+    }
+
+}
+
+
+/* =========================
+   PART 11 — GIANT SQUID
+========================= */
+
+class GiantSquid {
+
+    constructor(x,y){
+
+        this.x = x
+        this.y = y
+
+        this.width = 180
+        this.height = 120
+
+        this.health = 300
+
+        this.speed = 1.5
+
+        this.attackTimer = 0
+
+    }
+
+    update(){
+
+        const dx = Player.x - this.x
+        const dy = Player.y - this.y
+
+        const dist = Math.sqrt(dx*dx + dy*dy)
+
+        if(dist < 600){
+
+            this.x += dx * 0.01
+            this.y += dy * 0.01
+
+        }
+
+        this.attackTimer++
+
+        if(this.attackTimer > 120){
+
+            this.inkAttack()
+
+            this.attackTimer = 0
+
+        }
+
+    }
+
+    inkAttack(){
+
+        for(let i=0;i<20;i++){
+
+            const angle = Math.random()*Math.PI*2
+
+            const vx = Math.cos(angle)*2
+            const vy = Math.sin(angle)*2
+
+            Particles.spawn(
+                this.x,
+                this.y,
+                vx,
+                vy,
+                80,
+                4,
+                "#111111"
+            )
+
+        }
+
+    }
+
+    draw(ctx){
+
+        ctx.fillStyle = "#663399"
+
+        ctx.fillRect(
+            this.x,
+            this.y,
+            this.width,
+            this.height
+        )
+
+    }
+
+}
+
+
+/* =========================
+   PART 11 — KILLER WHALE
+========================= */
+
+class KillerWhale {
+
+    constructor(x,y){
+
+        this.x = x
+        this.y = y
+
+        this.width = 220
+        this.height = 100
+
+        this.speed = 3
+
+        this.health = 500
+
+        this.attackCooldown = 0
+
+    }
+
+    update(){
+
+        const dx = Player.x - this.x
+        const dy = Player.y - this.y
+
+        const dist = Math.sqrt(dx*dx + dy*dy)
+
+        if(dist < 900){
+
+            this.x += dx * 0.015
+            this.y += dy * 0.015
+
+        }
+
+        this.attackCooldown--
+
+        if(dist < 150 && this.attackCooldown <= 0){
+
+            this.biteAttack()
+
+            this.attackCooldown = 90
+
+        }
+
+    }
+
+    biteAttack(){
+
+        Player.health -= 30
+
+        BloodEffect.spawn(
+            Player.x,
+            Player.y
+        )
+
+        Effects.screenShake()
+
+    }
+
+    draw(ctx){
+
+        ctx.fillStyle = "#111"
+
+        ctx.fillRect(
+            this.x,
+            this.y,
+            this.width,
+            this.height
+        )
+
+    }
+
+}
+
+
+/* =========================
+   PART 11 — ANCIENT KRAKEN
+========================= */
+
+class Kraken {
+
+    constructor(x,y){
+
+        this.x = x
+        this.y = y
+
+        this.width = 400
+        this.height = 300
+
+        this.health = 1500
+
+        this.phase = 1
+
+        this.attackTimer = 0
+
+    }
+
+    update(){
+
+        const dx = Player.x - this.x
+        const dy = Player.y - this.y
+
+        const dist = Math.sqrt(dx*dx + dy*dy)
+
+        if(dist < 1200){
+
+            this.x += dx * 0.005
+            this.y += dy * 0.005
+
+        }
+
+        this.attackTimer++
+
+        if(this.phase === 1){
+
+            if(this.attackTimer > 150){
+
+                this.tentacleStrike()
+
+                this.attackTimer = 0
+
+            }
+
+        }
+
+        if(this.health < 800){
+            this.phase = 2
+        }
+
+        if(this.phase === 2){
+
+            if(this.attackTimer > 90){
+
+                this.inkStorm()
+
+                this.attackTimer = 0
+
+            }
+
+        }
+
+    }
+
+    tentacleStrike(){
+
+        const dx = Player.x - this.x
+        const dy = Player.y - this.y
+
+        const dist = Math.sqrt(dx*dx + dy*dy)
+
+        if(dist < 200){
+
+            Player.health -= 50
+
+            BloodEffect.spawn(Player.x,Player.y)
+
+            Effects.screenShake()
+
+        }
+
+    }
+
+    inkStorm(){
+
+        for(let i=0;i<50;i++){
+
+            const angle = Math.random()*Math.PI*2
+
+            const vx = Math.cos(angle)*3
+            const vy = Math.sin(angle)*3
+
+            Particles.spawn(
+                this.x,
+                this.y,
+                vx,
+                vy,
+                120,
+                5,
+                "#000000"
+            )
+
+        }
+
+    }
+
+    draw(ctx){
+
+        ctx.fillStyle = "#220033"
+
+        ctx.fillRect(
+            this.x,
+            this.y,
+            this.width,
+            this.height
+        )
+
+    }
+
+} 
+/* =========================
+   PART 12 — COIN SYSTEM
+========================= */
+
+const Economy = {
+
+    coins: 0,
+
+    add(amount){
+
+        this.coins += amount
+
+        UI.updateCoins()
+
+    },
+
+    spend(amount){
+
+        if(this.coins >= amount){
+
+            this.coins -= amount
+            UI.updateCoins()
+
+            return true
+        }
+
+        return false
+
+    }
+
+}
+
+
+/* =========================
+   PART 12 — ABILITY SYSTEM
+========================= */
+
+const Abilities = {
+
+    dashCooldown: 0,
+    biteCooldown: 0,
+    shockwaveCooldown: 0,
+    frenzyCooldown: 0,
+    roarCooldown: 0,
+
+    update(){
+
+        this.dashCooldown = Math.max(0,this.dashCooldown-1)
+        this.biteCooldown = Math.max(0,this.biteCooldown-1)
+        this.shockwaveCooldown = Math.max(0,this.shockwaveCooldown-1)
+        this.frenzyCooldown = Math.max(0,this.frenzyCooldown-1)
+        this.roarCooldown = Math.max(0,this.roarCooldown-1)
+
+    },
+
+    dash(){
+
+        if(this.dashCooldown === 0){
+
+            Player.x += Player.vx * 50
+            Player.y += Player.vy * 50
+
+            this.dashCooldown = 120
+
+        }
+
+    },
+
+    bite(){
+
+        if(this.biteCooldown === 0){
+
+            EnemySpawner.predators.forEach(e=>{
+
+                const dx = e.x - Player.x
+                const dy = e.y - Player.y
+
+                const dist = Math.sqrt(dx*dx + dy*dy)
+
+                if(dist < 80){
+
+                    e.health -= 50
+
+                    BloodEffect.spawn(e.x,e.y)
+
+                }
+
+            })
+
+            this.biteCooldown = 40
+
+        }
+
+    },
+
+    shockwave(){
+
+        if(this.shockwaveCooldown === 0){
+
+            EnemySpawner.predators.forEach(e=>{
+
+                const dx = e.x - Player.x
+                const dy = e.y - Player.y
+
+                const dist = Math.sqrt(dx*dx + dy*dy)
+
+                if(dist < 200){
+
+                    e.x += dx * 2
+                    e.y += dy * 2
+
+                }
+
+            })
+
+            this.shockwaveCooldown = 300
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   PART 12 — EVOLUTION TREE
+========================= */
+
+const Evolution = {
+
+    stage: 1,
+
+    stages: [
+
+        "Tiny Fish",
+        "Small Fish",
+        "Hunter Fish",
+        "Barracuda",
+        "Shark",
+        "Mega Shark",
+        "Leviathan"
+
+    ],
+
+    evolve(){
+
+        if(Player.level >= 5 && this.stage < this.stages.length){
+
+            this.stage++
+
+            Player.size += 10
+            Player.speed += 0.5
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   PART 12 — SAVE SYSTEM
+========================= */
+
+const SaveSystem = {
+
+    save(){
+
+        const data = {
+
+            coins: Economy.coins,
+            level: Player.level,
+            xp: Player.xp,
+            evolution: Evolution.stage
+
+        }
+
+        localStorage.setItem(
+            "oceanOverlordSave",
+            JSON.stringify(data)
+        )
+
+    },
+
+    load(){
+
+        const data = localStorage.getItem("oceanOverlordSave")
+
+        if(data){
+
+            const save = JSON.parse(data)
+
+            Economy.coins = save.coins
+            Player.level = save.level
+            Player.xp = save.xp
+            Evolution.stage = save.evolution
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   PART 12 — ADS SYSTEM
+========================= */
+
+const Ads = {
+
+    showInterstitialAd(){
+
+        console.log("Yandex interstitial ad")
+
+        if(window.ysdk){
+
+            ysdk.adv.showFullscreenAdv()
+
+        }
+
+    },
+
+    showRewardedAd(callback){
+
+        console.log("Yandex rewarded ad")
+
+        if(window.ysdk){
+
+            ysdk.adv.showRewardedVideo({
+                callbacks:{
+                    onRewarded:callback
+                }
+            })
+
+        }
+
+    }
+
+}
+
+
+/* =========================
+   PART 12 — GAME LOOP
+========================= */
+
+function gameLoop(){
+
+    requestAnimationFrame(gameLoop)
+
+    update()
+    render()
+
+}
+
+
+/* =========================
+   PART 12 — UPDATE
+========================= */
+
+function update(){
+
+    Input.update()
+
+    Player.update()
+
+    FishSpawner.update()
+
+    EnemySpawner.update()
+
+    BossSystem.update()
+
+    Particles.update()
+
+    Bubbles.update()
+
+    GlowFish.update()
+
+    OceanCurrents.update()
+
+    Abilities.update()
+
+}
+
+
+/* =========================
+   PART 12 — RENDER
+========================= */
+
+function render(){
+
+    ctx.clearRect(0,0,Game.width,Game.height)
+
+    Effects.apply(ctx)
+
+    OceanRenderer.draw(ctx)
+
+    FishSpawner.draw(ctx)
+
+    EnemySpawner.draw(ctx)
+
+    BossSystem.draw(ctx)
+
+    Player.draw(ctx)
+
+    Bubbles.draw(ctx)
+
+    GlowFish.draw(ctx)
+
+    Particles.draw(ctx)
+
+}
+
+
+/* =========================
+   START GAME
+========================= */
+
+SaveSystem.load()
+
+gameLoop() 
+
+
+</script>
+
+</body>
+</html> 
