@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ocean Overlord LEGEND</title>
+
+<style>
+
+body{
+margin:0;
+overflow:hidden;
+font-family:Arial;
+background:black;
+color:white;
+}
+
+canvas{
+display:block;
+background:radial-gradient(circle at center,#003,#000);
+}
+
+#menu{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+background:linear-gradient(#001,#000);
+}
+
+#menu h1{
+font-size:60px;
+margin-bottom:30px;
+}
+
+.button{
+padding:15px 40px;
+margin:10px;
+font-size:20px;
+cursor:pointer;
+background:#0af;
+border:none;
+color:white;
+}
+
+#hud{
+position:absolute;
+top:10px;
+left:10px;
+font-size:18px;
+}
+
+#xpbar{
+width:300px;
+height:20px;
+background:#222;
+margin-top:10px;
+}
+
+#xp{
+height:100%;
+background:#0f0;
+width:0%;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="menu">
+
+<h1>Ocean Overlord LEGEND</h1>
+
+<button class="button" onclick="startGame()">Play</button>
+
+<div>
+WASD - Move<br>
+Mouse - Direction<br>
+SHIFT - Boost<br>
+SPACE - Attack
+</div>
+
+</div>
+
+<div id="hud" style="display:none">
+
+Coins: <span id="coins">0</span><br>
+Stage: <span id="stage">Tiny Fish</span>
+
+<div id="xpbar">
+<div id="xp"></div>
+</div>
+
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+
+const canvas = document.getElementById("game")
+const ctx = canvas.getContext("2d")
+
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+
+let gameRunning = false
+
+const world = {
+width:8000,
+height:8000
+}
+
+const camera={
+x:0,
+y:0
+}
+
+const input={
+w:false,
+a:false,
+s:false,
+d:false,
+shift:false,
+mouseX:0,
+mouseY:0
+}
+
+const player={
+x:4000,
+y:4000,
+vx:0,
+vy:0,
+speed:3,
+size:15,
+angle:0,
+xp:0,
+coins:0,
+stage:0
+}
+
+const stages=[
+"Tiny Fish",
+"Small Fish",
+"Hunter Fish",
+"Barracuda",
+"Shark",
+"Mega Shark",
+"Leviathan"
+]
+
+function startGame(){
+
+document.getElementById("menu").style.display="none"
+document.getElementById("hud").style.display="block"
+
+gameRunning=true
+
+loop()
+
+}
+
+document.addEventListener("keydown",e=>{
+
+if(e.key==="w")input.w=true
+if(e.key==="a")input.a=true
+if(e.key==="s")input.s=true
+if(e.key==="d")input.d=true
+if(e.key==="Shift")input.shift=true
+
+})
+
+document.addEventListener("keyup",e=>{
+
+if(e.key==="w")input.w=false
+if(e.key==="a")input.a=false
+if(e.key==="s")input.s=false
+if(e.key==="d")input.d=false
+if(e.key==="Shift")input.shift=false
+
+})
+
+canvas.addEventListener("mousemove",e=>{
+
+input.mouseX=e.clientX
+input.mouseY=e.clientY
+
+})
+
+function update(){
+
+let speed = player.speed
+
+if(input.shift) speed*=2
+
+if(input.w) player.vy-=0.2
+if(input.s) player.vy+=0.2
+if(input.a) player.vx-=0.2
+if(input.d) player.vx+=0.2
+
+player.vx*=0.95
+player.vy*=0.95
+
+player.x+=player.vx*speed
+player.y+=player.vy*speed
+
+if(player.x<0)player.x=0
+if(player.y<0)player.y=0
+if(player.x>world.width)player.x=world.width
+if(player.y>world.height)player.y=world.height
+
+camera.x = player.x - canvas.width/2
+camera.y = player.y - canvas.height/2
+
+player.angle = Math.atan2(
+input.mouseY-canvas.height/2,
+input.mouseX-canvas.width/2
+)
+
+}
+
+function drawOcean(){
+
+const grid=200
+
+ctx.strokeStyle="rgba(255,255,255,0.03)"
+
+for(let x=0;x<world.width;x+=grid){
+
+ctx.beginPath()
+
+ctx.moveTo(x-camera.x,-camera.y)
+ctx.lineTo(x-camera.x,world.height-camera.y)
+
+ctx.stroke()
+
+}
+
+for(let y=0;y<world.height;y+=grid){
+
+ctx.beginPath()
+
+ctx.moveTo(-camera.x,y-camera.y)
+ctx.lineTo(world.width-camera.x,y-camera.y)
+
+ctx.stroke()
+
+}
+
+}
+
+function drawPlayer(){
+
+ctx.save()
+
+ctx.translate(player.x-camera.x,player.y-camera.y)
+
+ctx.rotate(player.angle)
+
+ctx.fillStyle="#4af"
+
+ctx.beginPath()
+
+ctx.ellipse(0,0,player.size,player.size*0.6,0,0,Math.PI*2)
+
+ctx.fill()
+
+ctx.beginPath()
+
+ctx.moveTo(-player.size,0)
+ctx.lineTo(-player.size-10,-5)
+ctx.lineTo(-player.size-10,5)
+
+ctx.fill()
+
+ctx.restore()
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+drawOcean()
+
+drawPlayer()
+
+}
+
+function loop(){
+
+if(!gameRunning)return
+
+update()
+draw()
+
+requestAnimationFrame(loop)
+
+}
+
+function addXP(amount){
+
+player.xp+=amount
+
+let percent = player.xp % 100
+
+document.getElementById("xp").style.width=percent+"%"
+
+if(player.xp>=100){
+
+player.xp=0
+evolve()
+
+}
+
+}
+
+function evolve(){
+
+if(player.stage<stages.length-1){
+
+player.stage++
+
+player.size+=10
+player.speed+=0.5
+
+document.getElementById("stage").innerText=stages[player.stage]
+
+}
+
+}
+
+function addCoins(n){
+
+player.coins+=n
+
+document.getElementById("coins").innerText=player.coins
+
+}
+
+// ===============================
+// FISH SYSTEM
+// ===============================
+
+const fishes=[]
+const predators=[]
+
+class Fish{
+
+constructor(x,y,size,type){
+
+this.x=x
+this.y=y
+
+this.vx=(Math.random()-0.5)*2
+this.vy=(Math.random()-0.5)*2
+
+this.size=size
+this.type=type
+this.speed=1+Math.random()
+
+}
+
+update(){
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let dist=Math.hypot(dx,dy)
+
+if(this.type==="food"){
+
+// убегает от игрока
+
+if(dist<200){
+
+this.vx-=dx/dist*0.2
+this.vy-=dy/dist*0.2
+
+}
+
+}
+
+if(this.type==="predator"){
+
+// охотится на игрока
+
+if(dist<500){
+
+this.vx+=dx/dist*0.1
+this.vy+=dy/dist*0.1
+
+}
+
+}
+
+this.vx*=0.98
+this.vy*=0.98
+
+this.x+=this.vx*this.speed
+this.y+=this.vy*this.speed
+
+}
+
+draw(){
+
+ctx.save()
+
+ctx.translate(this.x-camera.x,this.y-camera.y)
+
+ctx.rotate(Math.atan2(this.vy,this.vx))
+
+if(this.type==="food") ctx.fillStyle="#8ef"
+if(this.type==="predator") ctx.fillStyle="#f55"
+
+ctx.beginPath()
+ctx.ellipse(0,0,this.size,this.size*0.6,0,0,Math.PI*2)
+ctx.fill()
+
+ctx.beginPath()
+ctx.moveTo(-this.size,0)
+ctx.lineTo(-this.size-6,-4)
+ctx.lineTo(-this.size-6,4)
+ctx.fill()
+
+ctx.restore()
+
+}
+
+}
+
+// ===============================
+// SPAWN FISH
+// ===============================
+
+function spawnFish(){
+
+for(let i=0;i<80;i++){
+
+let x=Math.random()*world.width
+let y=Math.random()*world.height
+
+fishes.push(new Fish(x,y,6,"food"))
+
+}
+
+for(let i=0;i<10;i++){
+
+let x=Math.random()*world.width
+let y=Math.random()*world.height
+
+predators.push(new Fish(x,y,25,"predator"))
+
+}
+
+}
+
+spawnFish()
+
+// ===============================
+// ATTACK SYSTEM
+// ===============================
+
+let attackCooldown=0
+
+document.addEventListener("keydown",e=>{
+
+if(e.code==="Space")attack()
+
+})
+
+function attack(){
+
+if(attackCooldown>0)return
+
+attackCooldown=30
+
+for(let fish of fishes){
+
+let d=Math.hypot(player.x-fish.x,player.y-fish.y)
+
+if(d<player.size+fish.size+10){
+
+eatFish(fish)
+
+}
+
+}
+
+}
+
+function eatFish(fish){
+
+let index=fishes.indexOf(fish)
+
+if(index>-1){
+
+fishes.splice(index,1)
+
+addXP(20)
+addCoins(1)
+
+}
+
+}
+
+// ===============================
+// COLLISION WITH PREDATORS
+// ===============================
+
+function predatorCheck(){
+
+for(let p of predators){
+
+let d=Math.hypot(player.x-p.x,player.y-p.y)
+
+if(d<p.size+player.size){
+
+gameOver()
+
+}
+
+}
+
+}
+
+// ===============================
+// DRAW FISH
+// ===============================
+
+function drawFish(){
+
+for(let fish of fishes){
+
+fish.update()
+fish.draw()
+
+}
+
+for(let p of predators){
+
+p.update()
+p.draw()
+
+}
+
+}
+
+// ===============================
+// GAME OVER
+// ===============================
+
+function gameOver(){
+
+gameRunning=false
+
+alert("Game Over")
+
+location.reload()
+
+}
+
+// ===============================
+// EXTEND MAIN UPDATE
+// ===============================
+
+const oldUpdate=update
+
+update=function(){
+
+oldUpdate()
+
+drawFish()
+
+predatorCheck()
+
+if(attackCooldown>0)attackCooldown--
+
+}
+
+// ===============================
+// SCHOOL OF FISH
+// ===============================
+
+function spawnSchool(){
+
+let centerX=Math.random()*world.width
+let centerY=Math.random()*world.height
+
+for(let i=0;i<15;i++){
+
+let x=centerX+(Math.random()-0.5)*100
+let y=centerY+(Math.random()-0.5)*100
+
+fishes.push(new Fish(x,y,5,"food"))
+
+}
+
+}
+
+setInterval(spawnSchool,8000) 
+
+// ===============================
+// SMOOTH CAMERA
+// ===============================
+
+const smoothCamera={
+x:camera.x,
+y:camera.y
+}
+
+function updateCamera(){
+
+smoothCamera.x += (camera.x - smoothCamera.x)*0.1
+smoothCamera.y += (camera.y - smoothCamera.y)*0.1
+
+}
+
+// ===============================
+// PARTICLE SYSTEM
+// ===============================
+
+const particles=[]
+
+class Particle{
+
+constructor(x,y){
+
+this.x=x
+this.y=y
+
+this.vx=(Math.random()-0.5)*2
+this.vy=(Math.random()-0.5)*2
+
+this.life=60
+
+}
+
+update(){
+
+this.x+=this.vx
+this.y+=this.vy
+
+this.life--
+
+}
+
+draw(){
+
+ctx.fillStyle="rgba(255,255,255,"+(this.life/60)+")"
+
+ctx.beginPath()
+ctx.arc(this.x-smoothCamera.x,this.y-smoothCamera.y,2,0,Math.PI*2)
+ctx.fill()
+
+}
+
+}
+
+function spawnParticles(x,y){
+
+for(let i=0;i<10;i++){
+
+particles.push(new Particle(x,y))
+
+}
+
+}
+
+// ===============================
+// BUBBLE SYSTEM
+// ===============================
+
+const bubbles=[]
+
+class Bubble{
+
+constructor(){
+
+this.x=Math.random()*world.width
+this.y=Math.random()*world.height
+
+this.size=Math.random()*3+1
+
+}
+
+update(){
+
+this.y-=0.5
+
+if(this.y<0){
+
+this.y=world.height
+this.x=Math.random()*world.width
+
+}
+
+}
+
+draw(){
+
+ctx.fillStyle="rgba(200,240,255,0.5)"
+
+ctx.beginPath()
+ctx.arc(this.x-smoothCamera.x,this.y-smoothCamera.y,this.size,0,Math.PI*2)
+ctx.fill()
+
+}
+
+}
+
+for(let i=0;i<200;i++){
+
+bubbles.push(new Bubble())
+
+}
+
+// ===============================
+// CORAL SYSTEM
+// ===============================
+
+const corals=[]
+
+class Coral{
+
+constructor(x,y){
+
+this.x=x
+this.y=y
+
+this.size=20+Math.random()*40
+
+this.color=["#f66","#f96","#f0f","#ff6"][Math.floor(Math.random()*4)]
+
+}
+
+draw(){
+
+ctx.fillStyle=this.color
+
+ctx.beginPath()
+ctx.arc(this.x-smoothCamera.x,this.y-smoothCamera.y,this.size,0,Math.PI*2)
+ctx.fill()
+
+}
+
+}
+
+for(let i=0;i<200;i++){
+
+let x=Math.random()*world.width
+let y=Math.random()*world.height
+
+corals.push(new Coral(x,y))
+
+}
+
+// ===============================
+// BIOMES
+// ===============================
+
+function drawBiomes(){
+
+let size=800
+
+for(let x=0;x<world.width;x+=size){
+
+for(let y=0;y<world.height;y+=size){
+
+let noise=(Math.sin(x*0.001)+Math.cos(y*0.001))
+
+if(noise>1){
+
+ctx.fillStyle="rgba(0,50,80,0.2)"
+
+}
+
+else if(noise>0){
+
+ctx.fillStyle="rgba(0,30,60,0.2)"
+
+}
+
+else{
+
+ctx.fillStyle="rgba(0,10,30,0.3)"
+
+}
+
+ctx.fillRect(x-smoothCamera.x,y-smoothCamera.y,size,size)
+
+}
+
+}
+
+}
+
+// ===============================
+// EAT EFFECT
+// ===============================
+
+const oldEatFish=eatFish
+
+eatFish=function(fish){
+
+spawnParticles(fish.x,fish.y)
+
+oldEatFish(fish)
+
+}
+
+// ===============================
+// EXTEND DRAW FUNCTION
+// ===============================
+
+const oldDraw=draw
+
+draw=function(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+updateCamera()
+
+drawBiomes()
+
+drawOcean()
+
+for(let coral of corals){
+
+coral.draw()
+
+}
+
+for(let bubble of bubbles){
+
+bubble.update()
+bubble.draw()
+
+}
+
+drawFish()
+
+drawPlayer()
+
+for(let p of particles){
+
+p.update()
+p.draw()
+
+}
+
+}
+
+// ===============================
+// DEEP SEA LIGHT
+// ===============================
+
+function drawLighting(){
+
+let gradient=ctx.createRadialGradient(
+canvas.width/2,
+canvas.height/2,
+50,
+canvas.width/2,
+canvas.height/2,
+600
+)
+
+gradient.addColorStop(0,"rgba(0,0,0,0)")
+gradient.addColorStop(1,"rgba(0,0,0,0.6)")
+
+ctx.fillStyle=gradient
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+}
+
+const oldLoop=loop
+
+loop=function(){
+
+if(!gameRunning)return
+
+update()
+
+draw()
+
+drawLighting()
+
+requestAnimationFrame(loop)
+
+} 
+// ===============================
+// HEALTH SYSTEM
+// ===============================
+
+player.maxHealth = 100
+player.health = 100
+
+const healthBar = document.createElement("div")
+healthBar.style.position="absolute"
+healthBar.style.bottom="20px"
+healthBar.style.left="20px"
+healthBar.style.width="300px"
+healthBar.style.height="20px"
+healthBar.style.background="#400"
+
+const healthFill = document.createElement("div")
+healthFill.style.height="100%"
+healthFill.style.width="100%"
+healthFill.style.background="#f00"
+
+healthBar.appendChild(healthFill)
+document.body.appendChild(healthBar)
+
+function updateHealth(){
+
+healthFill.style.width = (player.health/player.maxHealth*100)+"%"
+
+}
+
+// ===============================
+// SHARK SYSTEM
+// ===============================
+
+class Shark{
+
+constructor(x,y){
+
+this.x=x
+this.y=y
+
+this.size=40
+this.speed=2
+
+this.vx=0
+this.vy=0
+
+this.health=80
+
+}
+
+update(){
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let d=Math.hypot(dx,dy)
+
+if(d<800){
+
+this.vx+=dx/d*0.05
+this.vy+=dy/d*0.05
+
+}
+
+this.vx*=0.98
+this.vy*=0.98
+
+this.x+=this.vx*this.speed
+this.y+=this.vy*this.speed
+
+}
+
+draw(){
+
+ctx.save()
+
+ctx.translate(this.x-smoothCamera.x,this.y-smoothCamera.y)
+
+ctx.rotate(Math.atan2(this.vy,this.vx))
+
+ctx.fillStyle="#777"
+
+ctx.beginPath()
+ctx.ellipse(0,0,this.size,this.size*0.5,0,0,Math.PI*2)
+ctx.fill()
+
+ctx.beginPath()
+ctx.moveTo(-this.size,0)
+ctx.lineTo(-this.size-20,-10)
+ctx.lineTo(-this.size-20,10)
+ctx.fill()
+
+ctx.restore()
+
+}
+
+}
+
+const sharks=[]
+
+for(let i=0;i<5;i++){
+
+let x=Math.random()*world.width
+let y=Math.random()*world.height
+
+sharks.push(new Shark(x,y))
+
+}
+
+// ===============================
+// SHARK COLLISION
+// ===============================
+
+function sharkAttack(){
+
+for(let shark of sharks){
+
+let d=Math.hypot(player.x-shark.x,player.y-shark.y)
+
+if(d<shark.size+player.size){
+
+player.health-=0.5
+
+}
+
+}
+
+}
+
+// ===============================
+// LEVIATHAN BOSS
+// ===============================
+
+class Leviathan{
+
+constructor(){
+
+this.x=world.width/2
+this.y=world.height/2
+
+this.size=120
+this.health=1000
+
+}
+
+update(){
+
+let dx=player.x-this.x
+let dy=player.y-this.y
+
+let d=Math.hypot(dx,dy)
+
+if(d<1200){
+
+this.x+=dx/d*0.8
+this.y+=dy/d*0.8
+
+}
+
+}
+
+draw(){
+
+ctx.fillStyle="#200"
+
+ctx.beginPath()
+ctx.arc(this.x-smoothCamera.x,this.y-smoothCamera.y,this.size,0,Math.PI*2)
+ctx.fill()
+
+}
+
+}
+
+let leviathan=null
+
+function spawnLeviathan(){
+
+leviathan=new Leviathan()
+
+}
+
+setTimeout(spawnLeviathan,180000)
+
+// ===============================
+// TREASURE CHESTS
+// ===============================
+
+const chests=[]
+
+class Chest{
+
+constructor(x,y){
+
+this.x=x
+this.y=y
+this.size=15
+
+}
+
+draw(){
+
+ctx.fillStyle="#fc0"
+
+ctx.fillRect(
+this.x-this.size-smoothCamera.x,
+this.y-this.size-smoothCamera.y,
+this.size*2,
+this.size*2
+)
+
+}
+
+}
+
+for(let i=0;i<30;i++){
+
+let x=Math.random()*world.width
+let y=Math.random()*world.height
+
+chests.push(new Chest(x,y))
+
+}
+
+function checkChests(){
+
+for(let i=chests.length-1;i>=0;i--){
+
+let c=chests[i]
+
+let d=Math.hypot(player.x-c.x,player.y-c.y)
+
+if(d<player.size+c.size){
+
+addCoins(10)
+addXP(30)
+
+chests.splice(i,1)
+
+}
+
+}
+
+}
+
+// ===============================
+// PAUSE MENU
+// ===============================
+
+let paused=false
+
+document.addEventListener("keydown",e=>{
+
+if(e.key==="Escape"){
+
+paused=!paused
+
+}
+
+})
+
+const oldUpdate4=update
+
+update=function(){
+
+if(paused)return
+
+oldUpdate4()
+
+updateHealth()
+
+sharkAttack()
+
+checkChests()
+
+for(let s of sharks){
+
+s.update()
+
+}
+
+if(leviathan){
+
+leviathan.update()
+
+}
+
+}
+
+// ===============================
+// DRAW EXTENSIONS
+// ===============================
+
+const oldDraw4=draw
+
+draw=function(){
+
+oldDraw4()
+
+for(let s of sharks){
+
+s.draw()
+
+}
+
+for(let c of chests){
+
+c.draw()
+
+}
+
+if(leviathan){
+
+leviathan.draw()
+
+}
+
+} 
+// ===============================
+// SAVE SYSTEM
+// ===============================
+
+function saveGame(){
+
+const data={
+coins:player.coins,
+xp:player.xp,
+best:localStorage.getItem("bestScore")||0
+}
+
+localStorage.setItem("oceanSave",JSON.stringify(data))
+
+}
+
+function loadGame(){
+
+const save=localStorage.getItem("oceanSave")
+
+if(!save)return
+
+const data=JSON.parse(save)
+
+player.coins=data.coins||0
+player.xp=data.xp||0
+
+}
+
+loadGame()
+
+setInterval(saveGame,5000)
+
+// ===============================
+// SCORE SYSTEM
+// ===============================
+
+let score=0
+let bestScore=localStorage.getItem("bestScore")||0
+
+function addScore(v){
+
+score+=v
+
+if(score>bestScore){
+
+bestScore=score
+localStorage.setItem("bestScore",bestScore)
+
+}
+
+}
+
+// ===============================
+// SKIN SYSTEM
+// ===============================
+
+let skins=[
+{color:"#4af",cost:0},
+{color:"#f44",cost:50},
+{color:"#0f0",cost:100},
+{color:"#ff0",cost:200}
+]
+
+let currentSkin=0
+
+function setSkin(id){
+
+if(player.coins>=skins[id].cost){
+
+currentSkin=id
+
+}
+
+}
+
+// override draw player
+
+const oldDrawPlayer=drawPlayer
+
+drawPlayer=function(){
+
+ctx.save()
+
+ctx.translate(player.x-smoothCamera.x,player.y-smoothCamera.y)
+
+ctx.fillStyle=skins[currentSkin].color
+
+ctx.beginPath()
+ctx.arc(0,0,player.size,0,Math.PI*2)
+ctx.fill()
+
+ctx.restore()
+
+}
+
+// ===============================
+// MENU SYSTEM
+// ===============================
+
+const menu=document.createElement("div")
+menu.style.position="absolute"
+menu.style.top="0"
+menu.style.left="0"
+menu.style.width="100%"
+menu.style.height="100%"
+menu.style.background="rgba(0,0,30,0.9)"
+menu.style.display="flex"
+menu.style.flexDirection="column"
+menu.style.alignItems="center"
+menu.style.justifyContent="center"
+menu.style.color="white"
+menu.style.fontSize="40px"
+
+menu.innerHTML=`
+<div>OCEAN OVERLORD LEGEND</div>
+<button id="playBtn">PLAY</button>
+<button id="skinsBtn">SKINS</button>
+`
+
+document.body.appendChild(menu)
+
+document.getElementById("playBtn").onclick=function(){
+
+menu.style.display="none"
+gameRunning=true
+loop()
+
+}
+
+// ===============================
+// ADS SYSTEM (YANDEX)
+// ===============================
+
+function showInterstitialAd(){
+
+console.log("Interstitial Ad")
+
+}
+
+function showRewardedAd(callback){
+
+console.log("Rewarded Ad")
+
+setTimeout(()=>{
+
+callback()
+
+},2000)
+
+}
+
+// ===============================
+// REVIVE SYSTEM
+// ===============================
+
+let revived=false
+
+function gameOver(){
+
+gameRunning=false
+
+if(!revived){
+
+if(confirm("Watch ad to revive?")){
+
+showRewardedAd(()=>{
+
+revived=true
+player.health=50
+gameRunning=true
+loop()
+
+})
+
+return
+
+}
+
+}
+
+showInterstitialAd()
+
+alert("Game Over")
+
+location.reload()
+
+}
+
+// ===============================
+// DOUBLE COINS REWARD
+// ===============================
+
+function rewardDoubleCoins(){
+
+showRewardedAd(()=>{
+
+player.coins*=2
+
+})
+
+}
+
+// ===============================
+// SIMPLE LEADERBOARD (LOCAL)
+// ===============================
+
+const scoreUI=document.createElement("div")
+
+scoreUI.style.position="absolute"
+scoreUI.style.top="10px"
+scoreUI.style.right="20px"
+scoreUI.style.color="white"
+
+document.body.appendChild(scoreUI)
+
+function updateScoreUI(){
+
+scoreUI.innerHTML=
+"Score: "+score+"<br>Best: "+bestScore
+
+}
+
+setInterval(updateScoreUI,500)
+
+// ===============================
+// FULLSCREEN SUPPORT
+// ===============================
+
+document.addEventListener("keydown",e=>{
+
+if(e.key==="f"){
+
+if(!document.fullscreenElement){
+
+document.body.requestFullscreen()
+
+}else{
+
+document.exitFullscreen()
+
+}
+
+}
+
+}) 
+</script>
+
+</body>
+</html> 
